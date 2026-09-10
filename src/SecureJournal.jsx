@@ -7,7 +7,7 @@ export default function SecureJournal({ goHome }) {
   const [entryText, setEntryText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [mood, setMood] = useState('😊');
-  const [bgColor, setBgColor] = useState('#FFFFFF');
+  const [bgColor, setBgColor] = useState('#222222');
   const [timeStr, setTimeStr] = useState('');
   const [dateStr, setDateStr] = useState('');
   
@@ -24,7 +24,7 @@ export default function SecureJournal({ goHome }) {
     return () => clearInterval(interval);
   }, []);
 
-  // NATIVE HARDWARE BACK BUTTON LISTENER
+  // Native hardware back button support
   useEffect(() => {
     const listener = CapApp.addListener('backButton', () => {
       if (goHome) goHome();
@@ -42,11 +42,10 @@ export default function SecureJournal({ goHome }) {
     try {
       const { speechRecognition } = await SpeechRecognition.requestPermissions();
       if (speechRecognition !== 'granted') {
-        alert("Microphone permission is required to dictate.");
+        alert("Microphone permission is required.");
         return;
       }
 
-      // Save the current text so we can seamlessly append new speech to it
       originalTextRef.current = entryText;
       setIsListening(true);
       
@@ -69,56 +68,58 @@ export default function SecureJournal({ goHome }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '24px', paddingTop: '12px' }}>
       
-      {/* Top Header Row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <button onClick={goHome} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '16px 24px', borderRadius: '16px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', border: 'none' }}>
-          <ArrowLeft size={28} /> Back
+      {/* Clean Header Row with proper spacing */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <button onClick={goHome} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '14px 20px', borderRadius: '16px', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none' }}>
+          <ArrowLeft size={24} /> Back
         </button>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ color: 'var(--accent)', fontSize: '20px', fontWeight: 'bold' }}>{dateStr}</div>
-          <div style={{ color: '#CCC', fontSize: '16px' }}>{timeStr}</div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ color: 'var(--accent)', fontSize: '18px', fontWeight: 'bold' }}>{dateStr}</div>
+          <div style={{ color: '#AAA', fontSize: '14px' }}>{timeStr}</div>
         </div>
-        <button onClick={() => setEntryText('')} style={{ backgroundColor: 'transparent', border: '2px solid var(--error)', padding: '16px', borderRadius: '16px', color: 'var(--error)' }}>
-          <Trash2 size={28} />
-        </button>
       </div>
 
       {/* Quote Box */}
-      <div style={{ border: '2px dashed var(--accent)', borderRadius: '16px', padding: '20px', textAlign: 'center', marginBottom: '24px' }}>
-        <p style={{ color: 'var(--accent)', fontSize: '22px', fontStyle: 'italic', margin: 0 }}>"Your words matter. Take your time."</p>
+      <div style={{ border: '2px dashed var(--accent)', borderRadius: '16px', padding: '16px', textAlign: 'center', marginBottom: '20px' }}>
+        <p style={{ color: 'var(--accent)', fontSize: '20px', fontStyle: 'italic', margin: 0 }}>"Your words matter. Take your time."</p>
       </div>
 
       {/* Mood Selectors */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
         {['😊', '😌', '😢', '😠', '💖'].map(m => (
-          <button key={m} onClick={() => setMood(m)} style={{ flex: 1, height: '70px', fontSize: '40px', backgroundColor: mood === m ? 'var(--accent)' : '#222', borderRadius: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: 'none' }}>
+          <button key={m} onClick={() => setMood(m)} style={{ flex: 1, height: '60px', fontSize: '32px', backgroundColor: mood === m ? 'var(--accent)' : '#222', borderRadius: '14px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: 'none' }}>
             {m}
           </button>
         ))}
       </div>
 
       {/* Color Selectors */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-        {['#FFFFFF', '#FCD34D', '#86EFAC', '#93C5FD', '#F9A8D4'].map(c => (
-          <button key={c} onClick={() => setBgColor(c)} style={{ flex: 1, height: '70px', backgroundColor: c, borderRadius: '16px', border: bgColor === c ? '4px solid var(--accent)' : 'none' }} />
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+        {['#222222', '#3B2F2F', '#1B3B2B', '#1B2A4A', '#3B1B38'].map(c => (
+          <button key={c} onClick={() => setBgColor(c)} style={{ flex: 1, height: '50px', backgroundColor: c, borderRadius: '14px', border: bgColor === c ? '3px solid var(--accent)' : '2px solid #444' }} />
         ))}
       </div>
 
-      {/* Text Area */}
+      {/* Text Area with dynamic background tint */}
       <textarea 
         value={entryText}
         onChange={(e) => setEntryText(e.target.value)}
         placeholder="Tap to type, or hit Dictate to speak your mind..."
-        style={{ flexGrow: 1, width: '100%', minHeight: '200px', backgroundColor: '#222', color: '#FFF', fontSize: '26px', padding: '24px', borderRadius: '24px', border: 'none', resize: 'none', marginBottom: '24px' }}
+        style={{ flexGrow: 1, width: '100%', minHeight: '180px', backgroundColor: bgColor, color: '#FFF', fontSize: '24px', padding: '20px', borderRadius: '20px', border: '2px solid #555', resize: 'none', marginBottom: '20px', transition: 'background-color 0.3s' }}
       />
 
-      {/* Massive Dictate Button */}
-      <button onClick={toggleDictation} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', backgroundColor: isListening ? 'var(--accent)' : 'transparent', border: '3px solid var(--accent)', borderRadius: '20px', padding: '24px', color: isListening ? '#000' : '#FFF', fontSize: '28px', fontWeight: 'bold' }}>
-        <Mic size={36} color={isListening ? '#000' : 'var(--accent)'} />
-        {isListening ? 'Listening...' : 'Tap to Dictate'}
-      </button>
+      {/* Action Buttons Footer */}
+      <div style={{ display: 'flex', gap: '12px' }}>
+        <button onClick={toggleDictation} style={{ flex: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: isListening ? 'var(--accent)' : '#333', border: '2px solid var(--accent)', borderRadius: '16px', padding: '20px', color: isListening ? '#000' : '#FFF', fontSize: '24px', fontWeight: 'bold' }}>
+          <Mic size={28} color={isListening ? '#000' : 'var(--accent)'} />
+          {isListening ? 'Listening...' : 'Tap to Dictate'}
+        </button>
+        <button onClick={() => setEntryText('')} style={{ flex: 1, backgroundColor: 'transparent', border: '2px solid var(--error)', borderRadius: '16px', color: 'var(--error)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Trash2 size={28} />
+        </button>
+      </div>
 
     </div>
   );
