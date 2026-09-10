@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Calculator, List, Plus, Delete, ArrowRight, RotateCcw, Check, Mic, Trash2, Share2, User, AlertTriangle, Clock, ChevronDown, ChevronUp, Repeat, ArrowDownUp, BellRing } from 'lucide-react';
+import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 const FREQUENCIES = [
@@ -31,6 +32,8 @@ export default function MedicationManager() {
   const [expandedId, setExpandedId] = useState(null); 
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
+  const originalTextRef = useRef('');
+  const activeTargetRef = useRef(null);
 
   // Calculator State
   const [calcStep, setCalcStep] = useState('input1'); 

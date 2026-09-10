@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus, Check, Archive, Trash2, ArrowLeft, ArrowRight, Mic, Clock, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
 export default function DailyTasks() {
   const [lists, setLists] = useState([]);
@@ -13,6 +14,8 @@ export default function DailyTasks() {
   
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
+  const originalTextRef = useRef('');
+  const activeTargetRef = useRef(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('sovereign_memory_tasklists');
@@ -98,28 +101,30 @@ export default function DailyTasks() {
     saveLists(updated);
   };
 
-  const toggleDictation = (target) => {
-    if (isListening && recognitionRef.current) {
-      recognitionRef.current.stop();
+  const toggleDictation = async (target) => {
+    if (isListening) {
+      await SpeechRecognition.stop();
       setIsListening(false);
       return;
     }
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
-      recognition.continuous = true;
-      recognition.onstart = () => setIsListening(true);
-      recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) transcript += event.results[i][0].transcript + ' ';
-        if (target === 'title') setNewListTitle(prev => prev + ' ' + transcript.trim());
-        if (target === 'task') setNewTaskText(prev => prev + ' ' + transcript.trim());
-      };
-      recognition.onend = () => setIsListening(false);
-      recognition.start();
-    } else {
-      alert("Please use keyboard dictation.");
+    try {
+      const { speechRecognition } = await SpeechRecognition.requestPermissions();
+      if (speechRecognition !== 'granted') return;
+      setIsListening(true);
+      activeTargetRef.current = target;
+      originalTextRef.current = target === 'title' ? newListTitle : newTaskText;
+      
+      SpeechRecognition.removeAllListeners();
+      SpeechRecognition.addListener("partialResults", (data) => {
+        if (data.matches && data.matches.length > 0) {
+          const newText = (originalTextRef.current + ' ' + data.matches[0]).trim();
+          if (activeTargetRef.current === 'title') setNewListTitle(newText);
+          if (activeTargetRef.current === 'task') setNewTaskText(newText);
+        }
+      });
+      await SpeechRecognition.start({ language: "en-US", partialResults: true, popup: false });
+    } catch (e) {
+      setIsListening(false);
     }
   };
 

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Calculator, ArrowRight, Delete, Volume2, RefreshCcw, Share2, User, Users, Sparkles } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Calculator, ArrowRight, Delete, Volume2, RefreshCcw, Share2, User, Users, Sparkles, Mic } from 'lucide-react';
+import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
 const MEANINGS = {
   1: "New beginnings, independence, and taking action.",
@@ -25,7 +26,6 @@ const GODDESS_QUOTES = [
   "Let the fierce love of Durga protect your peace and empower your daily steps."
 ];
 
-// STRICT NUMEROLOGY MATH: Reduces a single component properly preserving Master Numbers
 const reduceNum = (val) => {
   let num = parseInt(val, 10);
   if (!num) return 0;
@@ -46,6 +46,11 @@ export default function NumerologyWorkbench() {
   const [otherBday, setOtherBday] = useState(''); 
   const [otherDate, setOtherDate] = useState(''); 
   const [readingNotes, setReadingNotes] = useState('');
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const originalTextRef = useRef('');
+  const activeTargetRef = useRef(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('sovereign_my_bday');
@@ -79,7 +84,6 @@ export default function NumerologyWorkbench() {
   const calculateChart = (bday, tdate) => {
     if (bday.length !== 8 || tdate.length !== 8) return null;
     
-    // Component Reduction (Strict Pythagorean Method)
     const rBMonth = reduceNum(bday.slice(0, 2));
     const rBDay = reduceNum(bday.slice(2, 4));
     const rBYear = reduceNum(bday.slice(4, 8));
@@ -96,6 +100,30 @@ export default function NumerologyWorkbench() {
     const personalDay = reduceNum(personalMonth + rTDay);
 
     return { lifePath, universalYear, universalMonth, personalYear, personalMonth, personalDay, tdate };
+  };
+
+  const toggleDictation = async (setNotesFunc) => {
+    if (isListening) {
+      await SpeechRecognition.stop();
+      setIsListening(false);
+      return;
+    }
+    try {
+      const { speechRecognition } = await SpeechRecognition.requestPermissions();
+      if (speechRecognition !== 'granted') return;
+      setIsListening(true);
+      originalTextRef.current = document.querySelector('textarea')?.value || '';
+      
+      SpeechRecognition.removeAllListeners();
+      SpeechRecognition.addListener("partialResults", (data) => {
+        if (data.matches && data.matches.length > 0) {
+           setNotesFunc((originalTextRef.current + ' ' + data.matches[0]).trim());
+        }
+      });
+      await SpeechRecognition.start({ language: "en-US", partialResults: true, popup: false });
+    } catch (e) {
+      setIsListening(false);
+    }
   };
 
   const generateReportText = (chart, notes, quote) => {
@@ -117,26 +145,22 @@ export default function NumerologyWorkbench() {
   };
 
   const renderChart = (chart, notes, setNotes) => {
-    // Generate a deterministic quote based on her personal day so it feels uniquely tied to the reading
     const quote = GODDESS_QUOTES[chart.personalDay % GODDESS_QUOTES.length];
 
     return (
       <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         
-        {/* Goddess Inspiration Box */}
         <div style={{ backgroundColor: 'rgba(255, 215, 0, 0.05)', borderLeft: '6px solid #FFD700', padding: '24px', borderRadius: '0 16px 16px 0', marginBottom: '32px' }}>
           <Sparkles size={28} color="#FFD700" style={{ marginBottom: '12px' }} />
           <p style={{ fontSize: '26px', fontStyle: 'italic', color: '#FFF', margin: 0, lineHeight: '1.4' }}>"{quote}"</p>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
-          
           <div style={{ backgroundColor: 'var(--surface)', border: '2px solid #FFD700', padding: '24px', borderRadius: '24px', boxShadow: '0 4px 20px rgba(255, 215, 0, 0.1)' }}>
             <div style={{ color: '#FFD700', fontSize: '22px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Life Path Number</div>
             <div style={{ color: '#FFF', fontSize: '56px', fontWeight: '900', margin: '12px 0' }}>{chart.lifePath}</div>
             <div style={{ fontSize: '22px', color: '#E0E0E0', lineHeight: '1.4' }}>{MEANINGS[chart.lifePath]}</div>
           </div>
-
           <div style={{ backgroundColor: 'var(--surface)', padding: '24px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <div style={{ color: 'var(--text-muted)', fontSize: '20px' }}>Universal Year</div>
@@ -150,7 +174,6 @@ export default function NumerologyWorkbench() {
               <div style={{ fontSize: '20px', color: '#CCC' }}>{MEANINGS[chart.universalMonth]}</div>
             </div>
           </div>
-
           <div style={{ backgroundColor: 'var(--surface)', padding: '24px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <div style={{ color: 'var(--text-muted)', fontSize: '20px' }}>Personal Year</div>
@@ -164,7 +187,6 @@ export default function NumerologyWorkbench() {
               <div style={{ fontSize: '20px', color: '#CCC' }}>{MEANINGS[chart.personalMonth]}</div>
             </div>
           </div>
-
           <div style={{ backgroundColor: 'rgba(255, 149, 0, 0.1)', border: '2px solid var(--accent)', padding: '24px', borderRadius: '24px' }}>
             <div style={{ color: 'var(--text-muted)', fontSize: '22px', textTransform: 'uppercase', letterSpacing: '1px' }}>Personal Day</div>
             <div style={{ color: 'var(--accent)', fontSize: '56px', fontWeight: '900', margin: '12px 0' }}>{chart.personalDay}</div>
@@ -173,11 +195,20 @@ export default function NumerologyWorkbench() {
         </div>
 
         <h3 style={{ marginBottom: '16px', fontSize: '24px' }}>Journal your thoughts:</h3>
-        <textarea 
-          value={notes} onChange={(e) => setNotes(e.target.value)}
-          placeholder="Tap here to write down how this reading feels..."
-          style={{ width: '100%', minHeight: '160px', padding: '20px', fontSize: '24px', borderRadius: '20px', backgroundColor: '#222', color: '#FFF', border: '2px solid #555', marginBottom: '24px', resize: 'none', lineHeight: '1.4' }}
-        />
+        
+        {/* MASSIVE DICTATION LAYOUT */}
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+          <textarea 
+            value={notes} onChange={(e) => setNotes(e.target.value)}
+            placeholder="Tap to type or use Dictate..."
+            style={{ flex: 1, minHeight: '160px', padding: '20px', fontSize: '24px', borderRadius: '20px', backgroundColor: '#222', color: '#FFF', border: '2px solid #555', resize: 'none', lineHeight: '1.4' }}
+          />
+          <button onClick={() => toggleDictation(setNotes)} style={{ width: '90px', backgroundColor: isListening ? 'var(--error)' : 'var(--surface)', border: isListening ? 'none' : '2px solid #555', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px' }}>
+            <Mic size={32} color={isListening ? '#000' : 'var(--accent)'} />
+            <span style={{ fontSize: '14px', marginTop: '8px', color: isListening ? '#000' : '#FFF' }}>{isListening ? 'Stop' : 'Dictate'}</span>
+          </button>
+        </div>
+
         <button onClick={() => exportReading(chart, notes, quote)} className="primary-btn" style={{ justifyContent: 'center', padding: '24px', fontSize: '24px', backgroundColor: '#2E7D32', color: '#FFF', border: 'none', borderRadius: '20px' }}>
           <Share2 size={32} style={{ marginRight: '12px' }} /> Export Reading
         </button>
@@ -187,7 +218,6 @@ export default function NumerologyWorkbench() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '24px' }}>
-      
       <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
         <button onClick={() => setActiveTab('Mine')} style={{ backgroundColor: activeTab === 'Mine' ? 'var(--accent)' : 'var(--surface)', color: activeTab === 'Mine' ? '#000' : '#FFF', fontSize: '20px', padding: '16px', flex: 1, justifyContent: 'center', borderRadius: '16px' }}>
           <User size={24} /> My Daily Numbers
@@ -207,7 +237,6 @@ export default function NumerologyWorkbench() {
                 <div style={{ fontSize: '48px', letterSpacing: '4px' }}>{formatInput(myBdayInput)}</div>
               </div>
               <button className="primary-btn" disabled={myBdayInput.length < 8} onClick={saveMyBirthday} style={{ justifyContent: 'center', padding: '24px', fontSize: '24px', marginBottom: '24px', borderRadius: '20px' }}>Save & Auto-Calculate <ArrowRight size={28} /></button>
-              
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: 'auto' }}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => <button key={num} onClick={() => handlePadTap(num, 'myBday')} style={{ height: '80px', fontSize: '40px', backgroundColor: '#333', borderRadius: '16px' }}>{num}</button>)}
                 <button onClick={() => handleBackspace('myBday')} style={{ height: '80px', backgroundColor: 'var(--error)', justifyContent: 'center', borderRadius: '16px' }}><Delete size={36} color="#000" /></button>
@@ -231,7 +260,6 @@ export default function NumerologyWorkbench() {
                 <div style={{ fontSize: '40px', letterSpacing: '4px' }}>{formatInput(otherBday)}</div>
               </div>
               <button className="primary-btn" disabled={otherBday.length < 8} onClick={() => setOtherStep('date')} style={{ justifyContent: 'center', padding: '24px', fontSize: '24px', marginBottom: '24px', borderRadius: '20px' }}>Next: Enter Date <ArrowRight size={28} /></button>
-              
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: 'auto' }}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => <button key={num} onClick={() => handlePadTap(num, 'otherBday')} style={{ height: '80px', fontSize: '40px', backgroundColor: '#333', borderRadius: '16px' }}>{num}</button>)}
                 <button onClick={() => handleBackspace('otherBday')} style={{ height: '80px', backgroundColor: 'var(--error)', justifyContent: 'center', borderRadius: '16px' }}><Delete size={36} color="#000" /></button>
@@ -239,7 +267,6 @@ export default function NumerologyWorkbench() {
               </div>
             </div>
           )}
-
           {otherStep === 'date' && (
             <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
               <div style={{ backgroundColor: 'var(--surface)', borderRadius: '24px', padding: '32px', textAlign: 'center', marginBottom: '24px' }}>
@@ -247,7 +274,6 @@ export default function NumerologyWorkbench() {
                 <div style={{ fontSize: '40px', letterSpacing: '4px' }}>{formatInput(otherDate)}</div>
               </div>
               <button className="primary-btn" disabled={otherDate.length < 8} onClick={() => { setOtherStep('reading'); setReadingNotes(''); }} style={{ justifyContent: 'center', padding: '24px', fontSize: '24px', marginBottom: '24px', borderRadius: '20px' }}>Generate Reading <ArrowRight size={28} /></button>
-              
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: 'auto' }}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => <button key={num} onClick={() => handlePadTap(num, 'otherDate')} style={{ height: '80px', fontSize: '40px', backgroundColor: '#333', borderRadius: '16px' }}>{num}</button>)}
                 <button onClick={() => handleBackspace('otherDate')} style={{ height: '80px', backgroundColor: 'var(--error)', justifyContent: 'center', borderRadius: '16px' }}><Delete size={36} color="#000" /></button>
@@ -255,7 +281,6 @@ export default function NumerologyWorkbench() {
               </div>
             </div>
           )}
-
           {otherStep === 'reading' && (
             <>
               <button onClick={() => { setOtherStep('bday'); setOtherBday(''); setOtherDate(''); }} style={{ backgroundColor: '#333', padding: '16px', marginBottom: '24px', borderRadius: '16px', fontSize: '20px', color: '#FFF', border: 'none' }}>
