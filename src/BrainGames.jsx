@@ -59,20 +59,42 @@ function SequenceEcho({ goBack }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [flashIdx, setFlashIdx] = useState(null);
   const [message, setMessage] = useState("Watch the pattern,\nthen copy it.");
+  const [soundOn, setSoundOn] = useState(true);
 
-  const BASE_COLORS = ['#7A2828', '#2E5A2C', '#1C3B5E', '#8B7515']; // Red, Green, Blue, Yellow
-  const FLASH_COLORS = ['#FF6B6B', '#4DFF4D', '#6B6BFF', '#FFDF00']; // Bright versions
+  const BASE_COLORS = ['#7A2828', '#2E5A2C', '#1C3B5E', '#8B7515'];
+  const FLASH_COLORS = ['#FF6B6B', '#4DFF4D', '#6B6BFF', '#FFDF00'];
+  // Classic Simon Frequencies (E4, C4, G4, G3)
+  const TONES = [329.63, 261.63, 392.00, 196.00];
+
+  const playTone = (idx) => {
+    if (!soundOn) return;
+    if (!window.audioCtx) window.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = window.audioCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = TONES[idx];
+    gain.gain.setValueAtTime(0.5, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  };
 
   const playSequence = async (seq) => {
     setIsPlaying(true);
     setMessage("Watch carefully...");
-    await new Promise(r => setTimeout(r, 1000)); // Pause before starting
+    await new Promise(r => setTimeout(r, 1000));
     
     for (let i = 0; i < seq.length; i++) {
       setFlashIdx(seq[i]);
-      await new Promise(r => setTimeout(r, 900)); // Very slow flash
+      playTone(seq[i]);
+      await new Promise(r => setTimeout(r, 900));
       setFlashIdx(null);
-      await new Promise(r => setTimeout(r, 400)); // Gap between flashes
+      await new Promise(r => setTimeout(r, 400));
     }
     
     setIsPlaying(false);
@@ -91,28 +113,25 @@ function SequenceEcho({ goBack }) {
   const handleTap = async (idx) => {
     if (!gameActive || isPlaying) return;
 
-    // Flash the tapped color
     setFlashIdx(idx);
+    playTone(idx);
     setTimeout(() => setFlashIdx(null), 300);
 
     if (idx !== sequence[playerStep]) {
-      // Wrong Tap
       setGameActive(false);
       const feedback = score >= 3 ? "Good job!" : "Don't worry!";
       setMessage(`${feedback}\n9/10 people can't get past 7.`);
       return;
     }
 
-    // Right Tap
     const nextStep = playerStep + 1;
     if (nextStep === sequence.length) {
-      // Sequence completed
       setScore(s => s + 1);
       setPlayerStep(0);
       const nextColor = Math.floor(Math.random() * 4);
       const newSeq = [...sequence, nextColor];
       setSequence(newSeq);
-      setTimeout(() => playSequence(newSeq), 1200); // Give a beat before next round
+      setTimeout(() => playSequence(newSeq), 1200);
     } else {
       setPlayerStep(nextStep);
     }
@@ -129,7 +148,7 @@ function SequenceEcho({ goBack }) {
           <h2 style={{ color: '#FFF', margin: 0, fontSize: '36px', fontWeight: 'bold' }}>Score:</h2>
           <div style={{ color: '#FFF', fontSize: '36px', fontWeight: 'bold' }}>{score}</div>
         </div>
-        <button style={{ backgroundColor: '#333', padding: '16px 24px', borderRadius: '16px', border: 'none', color: '#FFF' }}>
+        <button onClick={() => setSoundOn(!soundOn)} style={{ backgroundColor: '#333', padding: '16px 24px', borderRadius: '16px', border: soundOn ? '2px solid #FF9500' : '2px solid #555', color: soundOn ? '#FF9500' : '#888' }}>
           <Volume2 size={32} />
         </button>
       </div>
@@ -157,7 +176,7 @@ function SequenceEcho({ goBack }) {
               width: '100%', 
               height: '100%', 
               minHeight: '160px',
-              transition: 'background-color 0.2s'
+              transition: 'background-color 0.1s'
             }} 
           />
         ))}
@@ -245,7 +264,7 @@ function MatchingGame({ goBack }) {
       } else {
         playSound('mismatch');
         // Give a hint! Mark the FIRST card clicked so it stays dimly visible
-        setCards(prev => prev.map((c, i) => i === match1 ? { ...c, isMarked: true } : c));
+        setCards(prev => prev.map((c, i) => i === match1 ? { ...c, isMarked: true } : { ...c, isMarked: false }));
         setTimeout(() => setFlippedIdxs([]), 1000);
       }
     }
