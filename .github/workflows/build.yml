@@ -35,22 +35,17 @@ jobs:
       - name: Sign APK Manually
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          ALIAS: ${{ secrets.KEY_ALIAS }}
+          PASS: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
-          # Aggressively strip all newlines and spaces, then decode
           echo "$KEYSTORE_B64" | tr -d '\n\r ' | base64 -d > android/keystore.jks
           
-          # Find whatever modern build-tools version GitHub has pre-installed
           BUILD_TOOLS_PATH=$(find $ANDROID_HOME/build-tools -maxdepth 1 | sort | tail -n 1)
           echo "Using build tools from: $BUILD_TOOLS_PATH"
           
-          # Align and Sign using native tools
           $BUILD_TOOLS_PATH/zipalign -v -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk android/app/build/outputs/apk/release/app-release-aligned.apk
           
-          $BUILD_TOOLS_PATH/apksigner sign --ks android/keystore.jks \
-            --ks-key-alias ${{ secrets.KEY_ALIAS }} \
-            --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
-            --key-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
-            android/app/build/outputs/apk/release/app-release-aligned.apk
+          $BUILD_TOOLS_PATH/apksigner sign --ks android/keystore.jks --ks-key-alias "$ALIAS" --ks-pass "pass:$PASS" --key-pass "pass:$PASS" android/app/build/outputs/apk/release/app-release-aligned.apk
             
           cp android/app/build/outputs/apk/release/app-release-aligned.apk android/app/build/outputs/apk/release/SovereignMemory-Signed.apk
 
