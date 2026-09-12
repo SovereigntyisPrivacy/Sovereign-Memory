@@ -15,8 +15,6 @@ export default function BrainGames({ goHome }) {
 
   if (activeGame === 'matching') return <MatchingGame goBack={() => setActiveGame('menu')} />;
   if (activeGame === 'sequence') return <SequenceEcho goBack={() => setActiveGame('menu')} />;
-  if (activeGame === 'household') return <HouseholdSorter goBack={() => setActiveGame('menu')} />;
-  if (activeGame === 'botanical') return <BotanicalSorter goBack={() => setActiveGame('menu')} />;
   if (activeGame === 'words') return <WordScramble goBack={() => setActiveGame('menu')} />;
   if (activeGame === 'math') return <QuickMath goBack={() => setActiveGame('menu')} />;
 
@@ -36,14 +34,6 @@ export default function BrainGames({ goHome }) {
         <button onClick={() => setActiveGame('sequence')} style={{ backgroundColor: '#222', borderRadius: '16px', padding: '32px 24px', display: 'flex', alignItems: 'center', gap: '20px', border: 'none' }}>
           <Music size={36} color="#FF9500" />
           <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>Sequence Echo</div>
-        </button>
-        <button onClick={() => setActiveGame('household')} style={{ backgroundColor: '#222', borderRadius: '16px', padding: '32px 24px', display: 'flex', alignItems: 'center', gap: '20px', border: 'none' }}>
-          <GridIcon size={36} color="#FF9500" />
-          <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>Household<br/>Sorter</div>
-        </button>
-        <button onClick={() => setActiveGame('botanical')} style={{ backgroundColor: '#222', borderRadius: '16px', padding: '32px 24px', display: 'flex', alignItems: 'center', gap: '20px', border: 'none' }}>
-          <Leaf size={36} color="#FF9500" />
-          <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>Botanical Sorter</div>
         </button>
         <button onClick={() => setActiveGame('words')} style={{ backgroundColor: '#222', borderRadius: '16px', padding: '32px 24px', display: 'flex', alignItems: 'center', gap: '20px', border: 'none' }}>
           <Type size={36} color="#FF9500" />
@@ -336,41 +326,66 @@ function MatchingGame({ goBack }) {
 }
 
 // ==========================================
-// 3. PLACEHOLDERS & EXTRA GAMES
+// 3. EXPANDED GAMES
 // ==========================================
-function HouseholdSorter({ goBack }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px', alignItems: 'center', justifyContent: 'center' }}>
-      <h2 style={{ color: '#FFF', fontSize: '32px', textAlign: 'center', marginBottom: '24px' }}>Household Sorter</h2>
-      <button onClick={goBack} style={{ backgroundColor: '#FF9500', padding: '20px 40px', borderRadius: '16px', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none' }}>Back to Menu</button>
-    </div>
-  );
-}
-
-function BotanicalSorter({ goBack }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px', alignItems: 'center', justifyContent: 'center' }}>
-      <h2 style={{ color: '#FFF', fontSize: '32px', textAlign: 'center', marginBottom: '24px' }}>Botanical Sorter</h2>
-      <button onClick={goBack} style={{ backgroundColor: '#FF9500', padding: '20px 40px', borderRadius: '16px', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none' }}>Back to Menu</button>
-    </div>
-  );
-}
-
 function WordScramble({ goBack }) {
-  const WORDS = [{ s: 'L I M A Y F', a: 'FAMILY', opts: ['FAMILY', 'FILMY', 'FLAME'] }, { s: 'E A C E P', a: 'PEACE', opts: ['PACE', 'PEACE', 'PIECE'] }];
-  const [idx, setIdx] = useState(0);
+  const WORDS = [
+    'FAMILY', 'PEACE', 'HEART', 'SMILE', 'FRIEND', 'GARDEN', 'SPRING', 'WINTER', 'SUMMER', 'AUTUMN',
+    'COFFEE', 'BAKING', 'PUZZLE', 'BLANKET', 'PILLOW', 'GUITAR', 'MELODY', 'RHYTHM', 'FOREST', 'STREAM',
+    'CANDLE', 'LANTERN', 'MIRROR', 'WINDOW', 'JOURNAL', 'MEMORY', 'WISDOM', 'GENTLE', 'BREEZE', 'SUNSET',
+    'LAUGH', 'HUG', 'COMFORT', 'HEALING', 'BEAUTY', 'NATURE', 'SUNSHINE', 'DAWN', 'TWILIGHT', 'STARLIGHT'
+  ];
+  const [word, setWord] = useState('');
+  const [scrambled, setScrambled] = useState('');
+  const [options, setOptions] = useState([]);
   const [score, setScore] = useState(0);
+  const [feedback, setFeedback] = useState('');
 
-  const handleGuess = (guess) => { if (guess === WORDS[idx].a) setScore(s => s + 1); setIdx((idx + 1) % WORDS.length); };
+  const generateWord = () => {
+    const target = WORDS[Math.floor(Math.random() * WORDS.length)];
+    let scram = target.split('').sort(() => Math.random() - 0.5).join('');
+    while (scram === target) scram = target.split('').sort(() => Math.random() - 0.5).join('');
+    
+    let fakes = [];
+    while (fakes.length < 2) {
+      const fake = WORDS[Math.floor(Math.random() * WORDS.length)];
+      if (fake !== target && !fakes.includes(fake)) fakes.push(fake);
+    }
+    setWord(target);
+    setScrambled(scram.split('').join(' '));
+    setOptions([target, ...fakes].sort(() => Math.random() - 0.5));
+    setFeedback('');
+  };
+
+  useEffect(() => { generateWord(); }, []);
+
+  const handleGuess = (guess) => { 
+    if (guess === word) {
+      setScore(s => s + 1); 
+      generateWord(); 
+    } else {
+      const msgs = ["Try again!", "Don't worry, you got this!", "Almost!", "Take your time, try another."];
+      setFeedback(msgs[Math.floor(Math.random() * msgs.length)]);
+    }
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px', paddingBottom: '24px', overflowY: 'auto' }}>
       <button onClick={goBack} style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FF9500', padding: '16px', borderRadius: '12px', color: '#000', fontSize: '22px', fontWeight: 'bold', border: 'none', marginBottom: '24px' }}>← Back to Games</button>
-      <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '32px' }}>
-        <div style={{ fontSize: '24px', color: '#FF9500' }}>Score: {score}</div>
-        <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#FFF', letterSpacing: '4px', textAlign: 'center' }}>{WORDS[idx].s}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-          {WORDS[idx].opts.map(opt => <button key={opt} onClick={() => handleGuess(opt)} style={{ backgroundColor: '#222', color: '#FFF', border: '2px solid #FF9500', borderRadius: '20px', padding: '24px', fontSize: '28px', fontWeight: 'bold' }}>{opt}</button>)}
+      <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '24px' }}>
+        <div style={{ fontSize: '28px', color: '#FF9500', fontWeight: 'bold' }}>Score: {score}</div>
+        <div style={{ minHeight: '34px', fontSize: '24px', color: '#FF9500', fontWeight: 'bold', textAlign: 'center', fontStyle: 'italic' }}>{feedback}</div>
+        
+        <div style={{ fontSize: '50px', fontWeight: 'bold', color: '#FFF', letterSpacing: '8px', textAlign: 'center', backgroundColor: '#222', padding: '32px 16px', borderRadius: '24px', width: '100%', border: '4px dashed #FF9500' }}>
+          {scrambled}
+        </div>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', marginTop: '16px' }}>
+          {options.map(opt => (
+            <button key={opt} onClick={() => handleGuess(opt)} style={{ backgroundColor: '#111', color: '#FFF', border: '2px solid #555', borderRadius: '20px', padding: '24px', fontSize: '32px', fontWeight: 'bold' }}>
+              {opt}
+            </button>
+          ))}
         </div>
       </div>
     </div>
@@ -379,19 +394,54 @@ function WordScramble({ goBack }) {
 
 function QuickMath({ goBack }) {
   const [score, setScore] = useState(0);
-  const generateQ = () => { const a = Math.floor(Math.random() * 10) + 1; const b = Math.floor(Math.random() * 10) + 1; const ans = a + b; return { q: `${a} + ${b}`, ans, opts: [ans, ans + 1, ans - 2].sort(() => Math.random() - 0.5) }; };
-  const [data, setData] = useState(generateQ());
+  const [data, setData] = useState({ q: '', ans: 0, opts: [] });
+  const [feedback, setFeedback] = useState('');
 
-  const handleGuess = (guess) => { if (guess === data.ans) setScore(s => s + 1); setData(generateQ()); };
+  const generateQ = () => { 
+    const types = ['+', '-', 'x'];
+    const op = types[Math.floor(Math.random() * types.length)];
+    let a, b, ans;
+    
+    if (op === '+') { a = Math.floor(Math.random() * 20) + 1; b = Math.floor(Math.random() * 20) + 1; ans = a + b; }
+    if (op === '-') { a = Math.floor(Math.random() * 20) + 10; b = Math.floor(Math.random() * a) + 1; ans = a - b; }
+    if (op === 'x') { a = Math.floor(Math.random() * 10) + 1; b = Math.floor(Math.random() * 10) + 1; ans = a * b; }
+    
+    let fakes = [ans + (Math.floor(Math.random() * 3) + 1), ans - (Math.floor(Math.random() * 3) + 1)];
+    if (fakes[0] === fakes[1]) fakes[1] += 2; // Prevent duplicate fake answers
+    
+    setData({ q: `${a} ${op} ${b}`, ans, opts: [ans, ...fakes].sort(() => Math.random() - 0.5) });
+    setFeedback('');
+  };
+
+  useEffect(() => { generateQ(); }, []);
+
+  const handleGuess = (guess) => { 
+    if (guess === data.ans) {
+      setScore(s => s + 1); 
+      generateQ(); 
+    } else {
+      const msgs = ["Try again!", "Don't worry, you got this!", "Oops! Try another one.", "Take your time!"];
+      setFeedback(msgs[Math.floor(Math.random() * msgs.length)]);
+    }
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px', paddingBottom: '24px', overflowY: 'auto' }}>
       <button onClick={goBack} style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FF9500', padding: '16px', borderRadius: '12px', color: '#000', fontSize: '22px', fontWeight: 'bold', border: 'none', marginBottom: '24px' }}>← Back to Games</button>
-      <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '32px' }}>
-        <div style={{ fontSize: '24px', color: '#FF9500' }}>Score: {score}</div>
-        <div style={{ fontSize: '64px', fontWeight: 'bold', color: '#FFF' }}>{data.q}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', width: '100%' }}>
-          {data.opts.map((opt, i) => <button key={i} onClick={() => handleGuess(opt)} style={{ backgroundColor: '#222', color: '#FFF', border: '2px solid #FF9500', borderRadius: '20px', padding: '32px 0', fontSize: '32px', fontWeight: 'bold' }}>{opt}</button>)}
+      <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '24px' }}>
+        <div style={{ fontSize: '28px', color: '#FF9500', fontWeight: 'bold' }}>Score: {score}</div>
+        <div style={{ minHeight: '34px', fontSize: '24px', color: '#FF9500', fontWeight: 'bold', textAlign: 'center', fontStyle: 'italic' }}>{feedback}</div>
+        
+        <div style={{ fontSize: '72px', fontWeight: 'bold', color: '#FFF', backgroundColor: '#222', padding: '32px', borderRadius: '24px', border: '4px dashed #FF9500', width: '100%', textAlign: 'center' }}>
+          {data.q}
+        </div>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', marginTop: '16px' }}>
+          {data.opts.map((opt, i) => (
+            <button key={i} onClick={() => handleGuess(opt)} style={{ backgroundColor: '#111', color: '#FFF', border: '2px solid #555', borderRadius: '20px', padding: '24px', fontSize: '36px', fontWeight: 'bold' }}>
+              {opt}
+            </button>
+          ))}
         </div>
       </div>
     </div>
