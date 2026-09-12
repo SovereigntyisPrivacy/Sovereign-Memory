@@ -1,119 +1,65 @@
 import { useState } from 'react';
-import TarotReader from './TarotReader';
-import { Home, CheckSquare, Phone, Clock, Brain, Hash, Lock } from 'lucide-react';
-import BrainGamesHub from './BrainGamesHub';
-import DailyTasks from "./DailyTasks";
+import { Shield, CheckSquare, Hash, Brain, Clock, Lock, Phone, Layers } from 'lucide-react';
+import DailyTasks from './DailyTasks';
 import NumerologyWorkbench from './NumerologyWorkbench';
+import BrainGames from './BrainGames';
 import MedicationManager from './MedicationManager';
 import SecureJournal from './SecureJournal';
 import FamilyDirectory from './FamilyDirectory';
-import './index.css';
+import TarotReader from './TarotReader';
 
-function App() {
-  const [currentScreen, setCurrentScreen] = useState('menu');
-  const goHome = () => setCurrentScreen('menu');
+export default function App() {
+  const [activeTab, setActiveTab] = useState('home');
 
   return (
-    <div className="app-container">
-      <header className="top-bar">
-        {currentScreen !== 'menu' ? (
-          <button onClick={goHome} className="primary-btn" style={{ width: 'auto', padding: '16px 24px' }}>
-            <Home size={36} color="#000" />
-            GO HOME
+    <div style={{ backgroundColor: 'var(--background)', color: 'var(--text)', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '16px', boxSizing: 'border-box' }}>
+      
+      {activeTab === 'home' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flexGrow: 1, justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <Shield size={64} color="var(--accent)" style={{ marginBottom: '12px' }} />
+            <h1 style={{ fontSize: '36px', fontWeight: '900', margin: 0, color: '#FFF' }}>Sovereign Tools</h1>
+            <p style={{ fontSize: '18px', color: 'var(--text-muted)', marginTop: '8px' }}>Private & Secure Offline Suite</p>
+          </div>
+
+          <button onClick={() => setActiveTab('tasks')} style={{ backgroundColor: '#222', border: '1px solid #444', borderRadius: '16px', padding: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
+            <CheckSquare size={32} color="var(--accent)" /> Daily Tasks
           </button>
-        ) : (
-          <h1 style={{ fontSize: '32px' }}>Sovereign Memory</h1>
-        )}
-      </header>
+          
+          <button onClick={() => setActiveTab('numerology')} style={{ backgroundColor: '#222', border: '1px solid #444', borderRadius: '16px', padding: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
+            <Hash size={32} color="var(--accent)" /> Numerology
+          </button>
 
-      <main>
-        {currentScreen === 'menu' && (
-          <>
-            {/* HER PERSONAL MESSAGE BLOCK */}
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '32px 24px', 
-              marginBottom: '32px',
-              backgroundColor: '#1a1a1a',
-              border: '6px solid #FFD700',
-              borderRadius: '24px',
-              boxShadow: '0 8px 24px rgba(255, 59, 48, 0.3)'
-            }}>
-              <h2 style={{ 
-                fontSize: '48px', 
-                fontWeight: '900', 
-                color: '#FF3B30', 
-                textShadow: '3px 3px 0px #FFD700',
-                marginBottom: '16px',
-                lineHeight: '1.2'
-              }}>
-                ❤️❤️ I love you mom. ❤️❤️
-              </h2>
-              <h3 style={{ 
-                fontSize: '32px', 
-                color: '#FFD700', 
-                marginBottom: '20px',
-                fontStyle: 'italic',
-                fontWeight: 'bold'
-              }}>
-                Forever and always. ✨
-              </h3>
-              <p style={{ 
-                fontSize: '24px', 
-                color: '#FFF', 
-                lineHeight: '1.5',
-                fontWeight: '500'
-              }}>
-                May this help you bring joy back to your interests. 🌻💛
-              </p>
-            </div>
+          <button onClick={() => setActiveTab('tarot')} style={{ backgroundColor: '#222', border: '1px solid #444', borderRadius: '16px', padding: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
+            <Layers size={32} color="var(--accent)" /> Tarot Reader
+          </button>
 
-            <div className="grid-menu">
-              <button onClick={() => setCurrentScreen('tasks')}>
-                <CheckSquare size={48} color="var(--accent)" />
-                Daily Tasks
-              </button>
-              
-              <button onClick={() => setCurrentScreen('numerology')}>
-                <Hash size={48} color="var(--accent)" />
-                Numerology
-              </button>
+          <button onClick={() => setActiveTab('brain')} style={{ backgroundColor: '#222', border: '1px solid #444', borderRadius: '16px', padding: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
+            <Brain size={32} color="var(--accent)" /> Brain Games
+          </button>
 
-              <button onClick={() => setCurrentScreen('game')}>
-                <Brain size={48} color="var(--accent)" />
-                Brain Games
-              </button>
+          <button onClick={() => setActiveTab('meds')} style={{ backgroundColor: '#222', border: '1px solid #444', borderRadius: '16px', padding: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
+            <Clock size={32} color="var(--accent)" /> Medications
+          </button>
 
-              <button onClick={() => setCurrentScreen('meds')}>
-                <Clock size={48} color="var(--accent)" />
-                Medications
-              </button>
+          <button onClick={() => setActiveTab('journal')} style={{ backgroundColor: '#222', border: '1px solid #444', borderRadius: '16px', padding: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
+            <Lock size={32} color="var(--accent)" /> Private Journal
+          </button>
 
-              <button onClick={() => setCurrentScreen('journal')}>
-                <Lock size={48} color="var(--accent)" />
-                Private Journal
-              </button>
+          <button onClick={() => setActiveTab('family')} style={{ backgroundColor: '#222', border: '1px solid #444', borderRadius: '16px', padding: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
+            <Phone size={32} color="var(--accent)" /> Call Family
+          </button>
+        </div>
+      )}
 
-              <button onClick={() => setCurrentScreen('contacts')}>
-                <Phone size={48} color="var(--accent)" />
-                Call Family
-              </button>
-            </div>
-          </>
-        )}
+      {activeTab === 'tasks' && <DailyTasks goHome={() => setActiveTab('home')} />}
+      {activeTab === 'numerology' && <NumerologyWorkbench goHome={() => setActiveTab('home')} />}
+      {activeTab === 'tarot' && <TarotReader goHome={() => setActiveTab('home')} />}
+      {activeTab === 'brain' && <BrainGames goHome={() => setActiveTab('home')} />}
+      {activeTab === 'meds' && <MedicationManager goHome={() => setActiveTab('home')} />}
+      {activeTab === 'journal' && <SecureJournal goHome={() => setActiveTab('home')} />}
+      {activeTab === 'family' && <FamilyDirectory goHome={() => setActiveTab('home')} />}
 
-        {/* PLACEHOLDERS FOR REMAINING FEATURES */}
-        {currentScreen === "tasks" && <DailyTasks />}
-        
-        {/* ACTIVE ROUTES */}
-        {currentScreen === 'game' && <BrainGamesHub />}
-        {currentScreen === 'numerology' && <NumerologyWorkbench />}
-        {currentScreen === 'meds' && <MedicationManager />}
-        {currentScreen === 'journal' && <SecureJournal />}
-        {currentScreen === 'contacts' && <FamilyDirectory />}
-      </main>
     </div>
   );
 }
-
-export default App;
