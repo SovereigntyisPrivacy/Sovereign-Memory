@@ -122,6 +122,49 @@ export default function TarotReader({ goHome }) {
     return '?'; 
   };
 
+  const getTrueAstrology = (card) => {
+    if (card.sign && !['Fire', 'Water', 'Earth', 'Air'].includes(card.sign)) return card.sign;
+    
+    const n = card.name.toLowerCase();
+    if (n.includes('ace ') || n.includes('page ') || n.includes('knight ') || n.includes('queen ') || n.includes('king ')) return null;
+
+    let num = '';
+    if (n.includes('two') || n.includes(' 2')) num = '2';
+    if (n.includes('three') || n.includes(' 3')) num = '3';
+    if (n.includes('four') || n.includes(' 4')) num = '4';
+    if (n.includes('five') || n.includes(' 5')) num = '5';
+    if (n.includes('six') || n.includes(' 6')) num = '6';
+    if (n.includes('seven') || n.includes(' 7')) num = '7';
+    if (n.includes('eight') || n.includes(' 8')) num = '8';
+    if (n.includes('nine') || n.includes(' 9')) num = '9';
+    if (n.includes('ten') || n.includes(' 10')) num = '10';
+
+    let suit = '';
+    if (n.includes('wand')) suit = 'Wands';
+    if (n.includes('cup')) suit = 'Cups';
+    if (n.includes('sword')) suit = 'Swords';
+    if (n.includes('pentacle') || n.includes('coin')) suit = 'Pentacles';
+
+    const key = num + ' of ' + suit;
+    
+    const DECAN_MAP = {
+      "2 of Wands": "Mars in Aries", "3 of Wands": "Sun in Aries", "4 of Wands": "Venus in Aries",
+      "5 of Wands": "Saturn in Leo", "6 of Wands": "Jupiter in Leo", "7 of Wands": "Mars in Leo",
+      "8 of Wands": "Mercury in Sagittarius", "9 of Wands": "Moon in Sagittarius", "10 of Wands": "Saturn in Sagittarius",
+      "2 of Cups": "Venus in Cancer", "3 of Cups": "Mercury in Cancer", "4 of Cups": "Moon in Cancer",
+      "5 of Cups": "Mars in Scorpio", "6 of Cups": "Sun in Scorpio", "7 of Cups": "Venus in Scorpio",
+      "8 of Cups": "Saturn in Pisces", "9 of Cups": "Jupiter in Pisces", "10 of Cups": "Mars in Pisces",
+      "2 of Swords": "Moon in Libra", "3 of Swords": "Saturn in Libra", "4 of Swords": "Jupiter in Libra",
+      "5 of Swords": "Venus in Aquarius", "6 of Swords": "Mercury in Aquarius", "7 of Swords": "Moon in Aquarius",
+      "8 of Swords": "Jupiter in Gemini", "9 of Swords": "Mars in Gemini", "10 of Swords": "Sun in Gemini",
+      "2 of Pentacles": "Jupiter in Capricorn", "3 of Pentacles": "Mars in Capricorn", "4 of Pentacles": "Sun in Capricorn",
+      "5 of Pentacles": "Mercury in Taurus", "6 of Pentacles": "Moon in Taurus", "7 of Pentacles": "Saturn in Taurus",
+      "8 of Pentacles": "Sun in Virgo", "9 of Pentacles": "Venus in Virgo", "10 of Pentacles": "Mercury in Virgo"
+    };
+
+    return DECAN_MAP[key] || null;
+  };
+
   const drawDailyCard = () => {
     const randomBuffer = new Uint32Array(1);
     window.crypto.getRandomValues(randomBuffer);
@@ -187,7 +230,11 @@ export default function TarotReader({ goHome }) {
     if (entry.question) body += `Question/Focus: ${entry.question}\n`;
     body += `\nCards Pulled:\n`;
     entry.cards.forEach(c => { 
-      body += `- ${c.name}\n  Meaning: ${c.meaning}\n  Numerology: ${c.num || '?'} | Astrology: ${c.sign || '?'} | Element: ${c.element || getDerivedElement(c.name)}\n\n`; 
+      const el = c.element || getDerivedElement(c.name);
+      const astro = getTrueAstrology(c);
+      body += `- ${c.name}\n  Meaning: ${c.meaning}\n  Numerology: ${c.num || '?'}`;
+      if (astro) body += ` | Astrology: ${astro}`;
+      body += ` | Element: ${el}\n\n`; 
     });
     body += `My Interpretation:\n${entry.notes || "No notes added."}`;
     window.location.href = `mailto:?subject=Tarot Reading Log&body=${encodeURIComponent(body)}`;
@@ -202,7 +249,11 @@ export default function TarotReader({ goHome }) {
     if (readingQuestion) body += `Question/Focus: ${readingQuestion}\n`;
     body += `\nCards Pulled:\n`;
     cardsToExport.forEach(c => { 
-      body += `- ${c.name}\n  Meaning: ${c.meaning}\n  Numerology: ${c.num || '?'} | Astrology: ${c.sign || '?'} | Element: ${c.element || getDerivedElement(c.name)}\n\n`; 
+      const el = c.element || getDerivedElement(c.name);
+      const astro = getTrueAstrology(c);
+      body += `- ${c.name}\n  Meaning: ${c.meaning}\n  Numerology: ${c.num || '?'}`;
+      if (astro) body += ` | Astrology: ${astro}`;
+      body += ` | Element: ${el}\n\n`;
     });
     body += `My Interpretation:\n${notes || "No notes added."}`;
     window.location.href = `mailto:?subject=Tarot Reading Log&body=${encodeURIComponent(body)}`;
@@ -214,22 +265,28 @@ export default function TarotReader({ goHome }) {
     (entry.question && entry.question.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const MetadataTags = ({ card }) => (
-    <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
-      <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>NUM</span>
-        <span style={{ color: '#FFD700', fontSize: '16px', fontWeight: 'bold' }}>{card.num || '?'}</span>
+  const MetadataTags = ({ card }) => {
+    const el = card.element || getDerivedElement(card.name);
+    const astro = getTrueAstrology(card);
+    return (
+      <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+        <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>NUM</span>
+          <span style={{ color: '#FFD700', fontSize: '16px', fontWeight: 'bold' }}>{card.num || '?'}</span>
+        </div>
+        {astro && (
+          <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>ASTROLOGY</span>
+            <span style={{ color: '#93C5FD', fontSize: '16px', fontWeight: 'bold' }}>{astro}</span>
+          </div>
+        )}
+        <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>ELEMENT</span>
+          <span style={{ color: '#4ADE80', fontSize: '16px', fontWeight: 'bold' }}>{el}</span>
+        </div>
       </div>
-      <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>ASTROLOGY</span>
-        <span style={{ color: '#93C5FD', fontSize: '16px', fontWeight: 'bold' }}>{card.sign || '?'}</span>
-      </div>
-      <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>ELEMENT</span>
-        <span style={{ color: '#4ADE80', fontSize: '16px', fontWeight: 'bold' }}>{card.element || getDerivedElement(card.name)}</span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (view === 'history') {
     return (
@@ -251,7 +308,7 @@ export default function TarotReader({ goHome }) {
             <p style={{ textAlign: 'center', color: '#888', fontSize: '20px', marginTop: '40px' }}>No readings found.</p>
           ) : (
             filteredHistory.map(entry => (
-              <div key={entry.id} style={{ backgroundColor: 'var(--surface)', borderRadius: '16px', border: '2px solid #FF9500', overflow: 'hidden' }}>
+              <div key={entry.id} style={{ backgroundColor: '#1E1E1E', borderRadius: '16px', border: '2px solid #FF9500', overflow: 'hidden' }}>
                 <button onClick={() => setExpandedEntry(expandedEntry === entry.id ? null : entry.id)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', backgroundColor: '#111', border: 'none', color: '#FFF' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                     <span style={{ fontSize: '22px', fontWeight: 'bold' }}>{entry.type === 'daily' ? 'Daily Draw' : 'Physical Reading'}</span>
@@ -326,9 +383,9 @@ export default function TarotReader({ goHome }) {
             </p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flexGrow: 1, justifyContent: 'center' }}>
-            <button onClick={drawDailyCard} style={{ backgroundColor: 'var(--surface)', border: '4px solid #FF9500', borderRadius: '24px', padding: '32px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 8px 24px rgba(255, 149, 0, 0.2)' }}>
+            <button onClick={drawDailyCard} style={{ backgroundColor: '#1E1E1E', border: '4px solid #FF9500', borderRadius: '24px', padding: '32px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 8px 24px rgba(255, 149, 0, 0.2)' }}>
               <Layers size={48} color="#FF9500" />
-              <div style={{ textAlign: 'left' }}><div style={{ fontSize: '26px', fontWeight: 'bold', color: '#FFF' }}>Draw Daily Card</div><div style={{ fontSize: '18px', color: 'var(--text-muted)' }}>Pull a digital card for today</div></div>
+              <div style={{ textAlign: 'left' }}><div style={{ fontSize: '26px', fontWeight: 'bold', color: '#FFF' }}>Draw Daily Card</div><div style={{ fontSize: '18px', color: '#AAA' }}>Pull a digital card for today</div></div>
             </button>
             <button onClick={() => { setView('physical'); setSelectedCards([]); setNotes(''); setReadingSubject('Myself'); setReadingQuestion(''); }} style={{ backgroundColor: '#2E7D32', border: 'none', borderRadius: '24px', padding: '32px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)' }}>
               <BookOpen size={48} color="#FFF" />
@@ -354,13 +411,11 @@ export default function TarotReader({ goHome }) {
           {view === 'physical' && (
             <>
               <div style={{ backgroundColor: '#222', padding: '16px', borderRadius: '20px', border: '2px solid #555', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <CalIcon size={32} color="#FF9500" />
+                <Calendar size={32} color="#FF9500" />
                 <input type="date" value={readingDate} onChange={(e) => setReadingDate(e.target.value)} style={{ flexGrow: 1, backgroundColor: 'transparent', color: '#FFF', border: 'none', fontSize: '24px', outline: 'none' }} />
               </div>
-
               <h3 style={{ margin: '0 0 12px 0', fontSize: '24px', color: '#FFF' }}>Question / Focus (Optional):</h3>
               <input type="text" value={readingQuestion} onChange={(e) => setReadingQuestion(e.target.value)} placeholder="e.g. What is my focus for today?" style={{ width: '100%', backgroundColor: '#222', border: '2px solid #555', color: '#FFF', fontSize: '22px', padding: '16px', borderRadius: '16px', marginBottom: '24px', outline: 'none', boxSizing: 'border-box' }} />
-
               <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', color: '#FFF' }}>1. Select Cards Pulled:</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '32px' }}>
                 {TAROT_DECK.map(card => {
@@ -385,13 +440,11 @@ export default function TarotReader({ goHome }) {
           {((view === 'physical' && selectedCards.length > 0) || view === 'daily') && (
             <>
               {view === 'daily' && drawnCard && (
-                <div style={{ backgroundColor: 'var(--surface)', border: '2px solid #FF9500', borderRadius: '24px', padding: '32px', textAlign: 'center', marginBottom: '24px' }}>
+                <div style={{ backgroundColor: '#1E1E1E', border: '2px solid #FF9500', borderRadius: '24px', padding: '32px', textAlign: 'center', marginBottom: '24px' }}>
                   <h3 style={{ color: '#FF9500', fontSize: '32px', marginBottom: '16px', marginTop: 0 }}>{drawnCard.name}</h3>
                   <p style={{ color: '#FFF', fontSize: '22px', lineHeight: '1.5', margin: '0 0 20px 0' }}>{drawnCard.meaning}</p>
-                  <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '16px', backgroundColor: '#111', padding: '16px', borderRadius: '16px' }}>
-                    <div><div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Num</div><div style={{ color: '#FFD700', fontSize: '24px', fontWeight: 'bold' }}>{drawnCard.num || '?'}</div></div>
-                    <div><div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Astrology</div><div style={{ color: '#93C5FD', fontSize: '24px', fontWeight: 'bold' }}>{drawnCard.sign || '?'}</div></div>
-                    <div><div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Element</div><div style={{ color: '#4ADE80', fontSize: '24px', fontWeight: 'bold' }}>{drawnCard.element || getDerivedElement(drawnCard.name)}</div></div>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <MetadataTags card={drawnCard} />
                   </div>
                 </div>
               )}
@@ -400,7 +453,7 @@ export default function TarotReader({ goHome }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
                   <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', color: '#FFF' }}>2. Card Meanings:</h3>
                   {selectedCards.map(c => (
-                    <div key={c.id} style={{ backgroundColor: 'var(--surface)', padding: '20px', borderRadius: '16px', borderLeft: '6px solid #FF9500' }}>
+                    <div key={c.id} style={{ backgroundColor: '#1E1E1E', padding: '20px', borderRadius: '16px', borderLeft: '6px solid #FF9500' }}>
                       <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#FF9500', marginBottom: '8px' }}>{c.name}</div>
                       <div style={{ fontSize: '18px', color: '#E0E0E0', marginBottom: '12px' }}>{c.meaning}</div>
                       <MetadataTags card={c} />
