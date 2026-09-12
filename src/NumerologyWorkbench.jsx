@@ -71,7 +71,9 @@ export default function NumerologyWorkbench({ goHome }) {
 
   const reduceNum = (num) => {
     if (!num) return 0;
-    let sum = num.toString().replace(/\D/g, '').split('').map(Number).reduce((a, b) => a + b, 0);
+    let numericStr = num.toString().replace(/\D/g, '');
+    if (numericStr === '11' || numericStr === '22' || numericStr === '33') return parseInt(numericStr);
+    let sum = numericStr.split('').map(Number).reduce((a, b) => a + b, 0);
     while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
       sum = sum.toString().split('').map(Number).reduce((a, b) => a + b, 0);
     }
