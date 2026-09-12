@@ -16,11 +16,13 @@ export default function App() {
       
       {activeTab === 'home' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flexGrow: 1, justifyContent: 'center' }}>
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <Shield size={64} color="var(--accent)" style={{ marginBottom: '12px' }} />
-            <h1 style={{ fontSize: '36px', fontWeight: '900', margin: 0, color: '#FFF' }}>Sovereign Tools</h1>
-            <p style={{ fontSize: '18px', color: 'var(--text-muted)', marginTop: '8px' }}>Private & Secure Offline Suite</p>
-          </div>
+          <div style={{ textAlign: 'center', marginBottom: '32px', marginTop: '16px' }}>
+          <Shield size={64} color="var(--accent)" style={{ marginBottom: '16px' }} />
+          <h1 style={{ fontSize: '40px', fontWeight: '900', margin: 0, color: '#FFF', letterSpacing: '1px' }}>Sovereign Memory</h1>
+          <p style={{ fontSize: '20px', color: 'var(--accent)', marginTop: '12px', fontStyle: 'italic', lineHeight: '1.4', padding: '0 10px' }}>
+            "I love you mom. I hope this app brings joy back to the things you love" 💖
+          </p>
+        </div>
 
           <button onClick={() => setActiveTab('tasks')} style={{ backgroundColor: '#222', border: '1px solid #444', borderRadius: '16px', padding: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
             <CheckSquare size={32} color="var(--accent)" /> Daily Tasks
