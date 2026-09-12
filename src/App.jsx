@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Shield, CheckSquare, Hash, Brain, Clock, Lock, Phone, Layers } from 'lucide-react';
 import DailyTasks from './DailyTasks';
 import NumerologyWorkbench from './NumerologyWorkbench';
-import BrainGames from './BrainGames';
 import MedicationManager from './MedicationManager';
 import SecureJournal from './SecureJournal';
 import FamilyDirectory from './FamilyDirectory';
@@ -55,10 +54,17 @@ export default function App() {
       {activeTab === 'tasks' && <DailyTasks goHome={() => setActiveTab('home')} />}
       {activeTab === 'numerology' && <NumerologyWorkbench goHome={() => setActiveTab('home')} />}
       {activeTab === 'tarot' && <TarotReader goHome={() => setActiveTab('home')} />}
-      {activeTab === 'brain' && <BrainGames goHome={() => setActiveTab('home')} />}
       {activeTab === 'meds' && <MedicationManager goHome={() => setActiveTab('home')} />}
       {activeTab === 'journal' && <SecureJournal goHome={() => setActiveTab('home')} />}
       {activeTab === 'family' && <FamilyDirectory goHome={() => setActiveTab('home')} />}
+      
+      {/* Temporary placeholder for Brain Games until we verify the exact file name */}
+      {activeTab === 'brain' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <h2 style={{ color: '#FFF' }}>Brain Games Under Construction</h2>
+          <button onClick={() => setActiveTab('home')} style={{ padding: '16px', fontSize: '20px', borderRadius: '12px', marginTop: '20px' }}>Go Back</button>
+        </div>
+      )}
 
     </div>
   );
