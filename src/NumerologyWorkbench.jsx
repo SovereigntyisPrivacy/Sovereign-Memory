@@ -1,7 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Home, Sparkles, Calculator, User, Users, Edit3, Save, History as HistoryIcon, Trash2, Share2, Moon, Star, Mic } from 'lucide-react';
+import { Home, Sparkles, Calculator, User, Users, Edit3, Save, History as HistoryIcon, Trash2, Share2, Mic } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
+
+const SHORT_MEANINGS = {
+  1: "New beginnings, independence, and taking action.",
+  2: "Balance, partnership, intuition, and diplomacy.",
+  3: "Creativity, self-expression, joy, and communication.",
+  4: "Structure, stability, hard work, and foundations.",
+  5: "Change, freedom, adventure, and adaptability.",
+  6: "Nurturing, family, responsibility, and healing.",
+  7: "Spirituality, introspection, analysis, and inner wisdom.",
+  8: "Abundance, power, material success, and karma.",
+  9: "Completion, humanitarianism, release, and endings.",
+  11: "Spiritual illumination, intense intuition, and visionary ideas.",
+  22: "Master building, large-scale projects, and manifesting dreams.",
+  33: "Master teaching, profound healing, and universal love."
+};
 
 const NUMEROLOGY_DATA = {
   1: { meaning: "The Leader: Fiercely independent, creative, and meant to pioneer new paths.", planet: "Sun", sign: "Leo" },
@@ -65,15 +80,9 @@ export default function NumerologyWorkbench({ goHome }) {
 
   const getLetterValue = (char) => {
     const map = {
-      a:1, j:1, s:1,
-      b:2, k:2, t:2,
-      c:3, l:3, u:3,
-      d:4, m:4, v:4,
-      e:5, n:5, w:5,
-      f:6, o:6, x:6,
-      g:7, p:7, y:7,
-      h:8, q:8, z:8,
-      i:9, r:9
+      a:1, j:1, s:1, b:2, k:2, t:2, c:3, l:3, u:3,
+      d:4, m:4, v:4, e:5, n:5, w:5, f:6, o:6, x:6,
+      g:7, p:7, y:7, h:8, q:8, z:8, i:9, r:9
     };
     return map[char] || 0;
   };
@@ -86,12 +95,10 @@ export default function NumerologyWorkbench({ goHome }) {
     const curM = today.getMonth() + 1;
     const curD = today.getDate();
 
-    // Core Date Numbers
     const lifePath = reduceNum(dateString);
     const birthDayNum = reduceNum(d);
     const attitudeNum = reduceNum(reduceNum(m) + reduceNum(d));
 
-    // Current Cycles
     const personalYear = reduceNum(reduceNum(m) + reduceNum(d) + reduceNum(curY));
     const personalMonth = reduceNum(personalYear + curM);
     const personalDay = reduceNum(personalMonth + curD);
@@ -100,27 +107,18 @@ export default function NumerologyWorkbench({ goHome }) {
     const universalMonth = reduceNum(universalYear + curM);
     const universalDay = reduceNum(universalMonth + curD);
 
-    // Pythagorean Name Numbers
-    let destinyNum = null;
-    let soulUrgeNum = null;
-    let personalityNum = null;
+    let destinyNum = null, soulUrgeNum = null, personalityNum = null;
 
     if (fullNameString.trim()) {
       const cleanName = fullNameString.toLowerCase().replace(/[^a-z]/g, '');
-      let vowelSum = 0;
-      let consonantSum = 0;
-      let totalSum = 0;
+      let vowelSum = 0, consonantSum = 0, totalSum = 0;
 
       for (let char of cleanName) {
         const val = getLetterValue(char);
         totalSum += val;
-        if (['a', 'e', 'i', 'o', 'u'].includes(char)) {
-          vowelSum += val;
-        } else {
-          consonantSum += val;
-        }
+        if (['a', 'e', 'i', 'o', 'u'].includes(char)) vowelSum += val;
+        else consonantSum += val;
       }
-
       destinyNum = reduceNum(totalSum);
       soulUrgeNum = reduceNum(vowelSum);
       personalityNum = reduceNum(consonantSum);
@@ -146,7 +144,7 @@ export default function NumerologyWorkbench({ goHome }) {
       const { speechRecognition } = await SpeechRecognition.requestPermissions();
       if (speechRecognition !== 'granted') return alert("Microphone permission needed.");
       setIsListening(true);
-      const result = await SpeechRecognition.start({ language: "en-US", prompt: "Speak your interpretation...", partialResults: false, popup: true });
+      const result = await SpeechRecognition.start({ language: "en-US", prompt: "Speak your notes...", partialResults: false, popup: true });
       if (result && result.matches && result.matches.length > 0) {
         setNotes(prev => (prev + ' ' + result.matches[0]).trim());
       }
@@ -188,141 +186,103 @@ export default function NumerologyWorkbench({ goHome }) {
 
   const exportReading = (name, date, nums, userNotes) => {
     const data = NUMEROLOGY_DATA[nums.lifePath] || { meaning: "A unique path.", planet: "?", sign: "?" };
-    let body = `Numerology Blueprint: ${name}\nBirthdate: ${date}\n\n`;
+    let body = `Numerology Chart: ${name}\nBirthdate: ${date}\n\n`;
     
     body += `--- CORE PROFILE ---\n`;
-    body += `Life Path: ${nums.lifePath} (${data.planet} / ${data.sign})\nMeaning: ${data.meaning}\n`;
-    body += `Birth Day Number: ${nums.birthDayNum}\nAttitude Number: ${nums.attitudeNum}\n\n`;
+    body += `Life Path: ${nums.lifePath} (${data.planet} / ${data.sign})\n${data.meaning}\n\n`;
+    body += `Birth Day Number: ${nums.birthDayNum}\n${SHORT_MEANINGS[nums.birthDayNum]}\n\n`;
+    body += `Attitude Number: ${nums.attitudeNum}\n${SHORT_MEANINGS[nums.attitudeNum]}\n\n`;
     
     if (nums.destinyNum) {
-      body += `--- NAME NUMBERS (Pythagorean) ---\n`;
-      body += `Destiny (Expression): ${nums.destinyNum}\n`;
-      body += `Soul Urge (Heart's Desire): ${nums.soulUrgeNum}\n`;
-      body += `Personality: ${nums.personalityNum}\n\n`;
+      body += `--- NAME NUMBERS ---\n`;
+      body += `Destiny: ${nums.destinyNum}\n${SHORT_MEANINGS[nums.destinyNum]}\n\n`;
+      body += `Soul Urge: ${nums.soulUrgeNum}\n${SHORT_MEANINGS[nums.soulUrgeNum]}\n\n`;
+      body += `Personality: ${nums.personalityNum}\n${SHORT_MEANINGS[nums.personalityNum]}\n\n`;
     }
 
     body += `--- CURRENT CYCLES ---\n`;
-    body += `Personal: Year ${nums.personalYear} | Month ${nums.personalMonth} | Day ${nums.personalDay}\n`;
-    body += `Universal: Year ${nums.universalYear} | Month ${nums.universalMonth} | Day ${nums.universalDay}\n\n`;
+    body += `Universal Year: ${nums.universalYear}\n${SHORT_MEANINGS[nums.universalYear]}\n\n`;
+    body += `Universal Month: ${nums.universalMonth}\n${SHORT_MEANINGS[nums.universalMonth]}\n\n`;
+    body += `Universal Day: ${nums.universalDay}\n${SHORT_MEANINGS[nums.universalDay]}\n\n`;
+    body += `Personal Year: ${nums.personalYear}\n${SHORT_MEANINGS[nums.personalYear]}\n\n`;
+    body += `Personal Month: ${nums.personalMonth}\n${SHORT_MEANINGS[nums.personalMonth]}\n\n`;
+    body += `Personal Day: ${nums.personalDay}\n${SHORT_MEANINGS[nums.personalDay]}\n\n`;
     
-    if (userNotes) body += `My Interpretation:\n${userNotes}`;
+    if (userNotes) body += `--- NOTES ---\n${userNotes}`;
     
-    window.location.href = `mailto:?subject=Numerology Blueprint: ${encodeURIComponent(name)}&body=${encodeURIComponent(body)}`;
+    window.location.href = `mailto:?subject=Numerology Reading: ${encodeURIComponent(name)}&body=${encodeURIComponent(body)}`;
   };
+
+  const NumRow = ({ title, num, highlight = false }) => (
+    <div style={{ backgroundColor: '#222', borderRadius: '16px', padding: '20px', marginBottom: '16px', border: highlight ? '2px solid #FFD700' : 'none' }}>
+      <div style={{ color: highlight ? '#FFD700' : '#CCC', fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>{title}</div>
+      <div style={{ color: '#FF9500', fontSize: '36px', fontWeight: 'bold', marginBottom: '8px' }}>{num}</div>
+      <div style={{ color: '#FFF', fontSize: '18px', lineHeight: '1.4' }}>{SHORT_MEANINGS[num] || "A unique energetic path."}</div>
+    </div>
+  );
 
   const ReadingCard = ({ nums, name, onSave }) => {
     const data = NUMEROLOGY_DATA[nums.lifePath] || { meaning: "A beautiful and unique path awaits you.", planet: "Unknown", sign: "Unknown" };
     return (
-      <div style={{ backgroundColor: '#1E3A8A', padding: '32px 24px', borderRadius: '24px', border: '2px solid #1c3b5e', textAlign: 'center', marginTop: '24px' }}>
-        <div style={{ color: '#93C5FD', fontSize: '20px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
-          {name}'S LIFE PATH
-        </div>
-        <div style={{ color: '#FFF', fontSize: '80px', fontWeight: 'bold', margin: '8px 0', textShadow: '0px 4px 12px rgba(0,0,0,0.5)' }}>
-          {nums.lifePath}
-        </div>
-        
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '24px' }}>
-          <div style={{ backgroundColor: '#112244', padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: '#93C5FD', fontWeight: 'bold' }}>
-            <Moon size={20} /> {data.planet}
-          </div>
-          <div style={{ backgroundColor: '#112244', padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: '#FFD700', fontWeight: 'bold' }}>
-            <Star size={20} /> {data.sign}
-          </div>
-        </div>
+      <div style={{ paddingBottom: '24px' }}>
+        <h2 style={{ color: '#FFF', fontSize: '28px', textAlign: 'center', margin: '0 0 24px 0' }}>
+          Today's Energies for {name}
+        </h2>
 
-        <p style={{ color: '#E0E0E0', fontSize: '22px', lineHeight: '1.4', margin: '0 0 32px 0', fontStyle: 'italic' }}>
-          "{data.meaning}"
-        </p>
+        <div style={{ border: '2px solid #FF9500', borderRadius: '24px', padding: '24px', backgroundColor: '#111' }}>
+          <h3 style={{ color: '#FFF', fontSize: '24px', marginTop: 0, marginBottom: '24px' }}>Full Numerology Chart</h3>
 
-        {/* CORE DATE NUMBERS */}
-        <div style={{ backgroundColor: '#112244', padding: '20px', borderRadius: '20px', marginBottom: '24px' }}>
-          <div style={{ color: '#93C5FD', fontSize: '16px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', fontWeight: 'bold' }}>Additional Core Numbers</div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <div style={{ flex: 1, backgroundColor: '#1a365d', padding: '16px', borderRadius: '16px' }}>
-              <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Birth Day</div>
-              <div style={{ color: '#FFF', fontSize: '32px', fontWeight: 'bold' }}>{nums.birthDayNum}</div>
-            </div>
-            <div style={{ flex: 1, backgroundColor: '#1a365d', padding: '16px', borderRadius: '16px' }}>
-              <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Attitude</div>
-              <div style={{ color: '#FFF', fontSize: '32px', fontWeight: 'bold' }}>{nums.attitudeNum}</div>
-            </div>
+          <div style={{ backgroundColor: '#222', borderRadius: '16px', padding: '20px', marginBottom: '16px', border: '2px solid #FFD700' }}>
+            <div style={{ color: '#FFD700', fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>Life Path Number</div>
+            <div style={{ color: '#FF9500', fontSize: '48px', fontWeight: 'bold', marginBottom: '8px' }}>{nums.lifePath}</div>
+            <div style={{ color: '#FFF', fontSize: '18px', lineHeight: '1.4', marginBottom: '12px' }}>{data.meaning}</div>
+            <div style={{ color: '#888', fontSize: '14px', fontStyle: 'italic' }}>Planet: {data.planet} | Sign: {data.sign}</div>
           </div>
-        </div>
 
-        {/* NAME NUMBERS (Only shows if Name was provided) */}
-        {nums.destinyNum > 0 && (
-          <div style={{ backgroundColor: '#112244', padding: '20px', borderRadius: '20px', marginBottom: '24px' }}>
-            <div style={{ color: '#93C5FD', fontSize: '16px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', fontWeight: 'bold' }}>Pythagorean Name Numbers</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-              <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
-                <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Destiny</div>
-                <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.destinyNum}</div>
-              </div>
-              <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
-                <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Soul Urge</div>
-                <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.soulUrgeNum}</div>
-              </div>
-              <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
-                <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Personality</div>
-                <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.personalityNum}</div>
-              </div>
-            </div>
-          </div>
-        )}
+          <NumRow title="Birth Day Number" num={nums.birthDayNum} />
+          <NumRow title="Attitude Number" num={nums.attitudeNum} />
+          
+          {nums.destinyNum > 0 && (
+            <>
+              <div style={{ borderTop: '2px dashed #444', margin: '24px 0' }} />
+              <NumRow title="Destiny Number" num={nums.destinyNum} />
+              <NumRow title="Soul Urge Number" num={nums.soulUrgeNum} />
+              <NumRow title="Personality Number" num={nums.personalityNum} />
+            </>
+          )}
 
-        {/* CURRENT CYCLES */}
-        <div style={{ backgroundColor: '#112244', padding: '20px', borderRadius: '20px', marginBottom: '24px' }}>
-          <div style={{ color: '#93C5FD', fontSize: '16px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', fontWeight: 'bold' }}>Current Cycles</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
-              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Pers Year</div>
-              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.personalYear}</div>
-            </div>
-            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
-              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Pers Month</div>
-              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.personalMonth}</div>
-            </div>
-            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
-              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Pers Day</div>
-              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.personalDay}</div>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
-              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Univ Year</div>
-              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.universalYear}</div>
-            </div>
-            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
-              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Univ Month</div>
-              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.universalMonth}</div>
-            </div>
-            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
-              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Univ Day</div>
-              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.universalDay}</div>
-            </div>
-          </div>
+          <div style={{ borderTop: '2px dashed #444', margin: '24px 0' }} />
+          
+          <NumRow title="Universal Year" num={nums.universalYear} />
+          <NumRow title="Universal Month" num={nums.universalMonth} />
+          <NumRow title="Universal Day" num={nums.universalDay} />
+          
+          <NumRow title="Personal Year" num={nums.personalYear} />
+          <NumRow title="Personal Month" num={nums.personalMonth} />
+          <NumRow title="Personal Day" num={nums.personalDay} />
         </div>
 
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '20px', color: '#FFF', textAlign: 'left' }}>My Notes:</h3>
-        <textarea 
-          value={notes} 
-          onChange={(e) => setNotes(e.target.value)} 
-          placeholder="Tap to type, or hit Dictate..." 
-          style={{ width: '100%', minHeight: '120px', backgroundColor: '#112244', color: '#FFF', fontSize: '20px', padding: '16px', borderRadius: '16px', border: '2px solid #3B82F6', resize: 'none', marginBottom: '16px', boxSizing: 'border-box' }} 
-        />
-        
+        <h3 style={{ margin: '24px 0 12px 0', fontSize: '24px', color: '#FFF' }}>Notes on this reading:</h3>
         <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-          <button onClick={toggleDictation} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: isListening ? '#FF9500' : '#222', border: '2px solid #FF9500', borderRadius: '16px', padding: '16px', color: isListening ? '#000' : '#FFF', fontSize: '20px', fontWeight: 'bold' }}>
-            <Mic size={24} color={isListening ? '#000' : '#FF9500'} /> {isListening ? 'Listening...' : 'Dictate'}
-          </button>
-          <button onClick={() => exportReading(name, name === 'MY' ? myBday : otherBday, nums, notes)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#222', border: '2px solid #3B82F6', borderRadius: '16px', padding: '16px', color: '#3B82F6', fontSize: '20px', fontWeight: 'bold' }}>
-            <Share2 size={24} /> Export
+          <textarea 
+            value={notes} 
+            onChange={(e) => setNotes(e.target.value)} 
+            placeholder="Tap here to write down your thoughts..." 
+            style={{ flexGrow: 1, minHeight: '120px', backgroundColor: '#222', color: '#FFF', fontSize: '20px', padding: '16px', borderRadius: '16px', border: '2px solid #444', resize: 'none', outline: 'none' }} 
+          />
+          <button onClick={toggleDictation} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: isListening ? '#FF9500' : '#222', border: '2px solid #FF9500', borderRadius: '16px', width: '80px', color: isListening ? '#000' : '#FFF', fontWeight: 'bold' }}>
+            <Mic size={28} color={isListening ? '#000' : '#FF9500'} />
           </button>
         </div>
-
-        <button onClick={onSave} style={{ width: '100%', backgroundColor: '#2E7D32', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
-          <Save size={24} /> Save to History
-        </button>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <button onClick={() => exportReading(name, name === 'You' ? myBday : otherBday, nums, notes)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: '#2E7D32', border: 'none', borderRadius: '16px', padding: '20px', color: '#FFF', fontSize: '22px', fontWeight: 'bold' }}>
+            <Share2 size={28} /> Export Full Reading
+          </button>
+          <button onClick={onSave} style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: '2px solid #555', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+            <Save size={24} /> Save to History
+          </button>
+        </div>
       </div>
     );
   };
@@ -333,14 +293,14 @@ export default function NumerologyWorkbench({ goHome }) {
         <Home size={24} /> GO HOME
       </button>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-        <button onClick={() => switchView('mine')} style={{ flex: 1, backgroundColor: view === 'mine' ? '#FF9500' : '#222', color: view === 'mine' ? '#000' : '#FFF', padding: '12px', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          <User size={24} /> My Path
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
+        <button onClick={() => switchView('mine')} style={{ flex: 1, backgroundColor: view === 'mine' ? '#FF9500' : '#222', color: view === 'mine' ? '#000' : '#FFF', padding: '16px', borderRadius: '16px', fontSize: '20px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          <User size={24} /> My Daily<br/>Numbers
         </button>
-        <button onClick={() => switchView('other')} style={{ flex: 1, backgroundColor: view === 'other' ? '#FF9500' : '#222', color: view === 'other' ? '#000' : '#FFF', padding: '12px', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          <Users size={24} /> Another
+        <button onClick={() => switchView('other')} style={{ flex: 1, backgroundColor: view === 'other' ? '#FF9500' : '#222', color: view === 'other' ? '#000' : '#FFF', padding: '16px', borderRadius: '16px', fontSize: '20px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          <Users size={24} /> Read for<br/>Others
         </button>
-        <button onClick={() => switchView('history')} style={{ flex: 1, backgroundColor: view === 'history' ? '#FF9500' : '#222', color: view === 'history' ? '#000' : '#FFF', padding: '12px', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+        <button onClick={() => switchView('history')} style={{ flex: 1, backgroundColor: view === 'history' ? '#FF9500' : '#222', color: view === 'history' ? '#000' : '#FFF', padding: '16px', borderRadius: '16px', fontSize: '20px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
           <HistoryIcon size={24} /> History
         </button>
       </div>
@@ -365,10 +325,10 @@ export default function NumerologyWorkbench({ goHome }) {
             </div>
           ) : (
             <div style={{ position: 'relative' }}>
-              <button onClick={() => setIsEditingMine(true)} style={{ position: 'absolute', top: '40px', right: '16px', backgroundColor: '#112244', border: 'none', color: '#FFF', padding: '12px', borderRadius: '12px', zIndex: 10 }}>
+              <button onClick={() => setIsEditingMine(true)} style={{ position: 'absolute', top: '0px', right: '16px', backgroundColor: '#333', border: 'none', color: '#FFF', padding: '12px', borderRadius: '12px', zIndex: 10 }}>
                 <Edit3 size={24} />
               </button>
-              <ReadingCard nums={calculateAll(myBday, myFullName)} name="MY" onSave={() => saveReadingToHistory('mine')} />
+              <ReadingCard nums={calculateAll(myBday, myFullName)} name="You" onSave={() => saveReadingToHistory('mine')} />
             </div>
           )}
         </>
@@ -376,8 +336,8 @@ export default function NumerologyWorkbench({ goHome }) {
 
       {view === 'other' && (
         <>
-          <div style={{ backgroundColor: '#111', padding: '24px', borderRadius: '20px', border: '2px solid #444' }}>
-            <h2 style={{ color: '#FFF', margin: '0 0 12px 0', fontSize: '22px' }}>Display Name:</h2>
+          <div style={{ backgroundColor: '#111', padding: '24px', borderRadius: '20px', border: '2px solid #444', marginBottom: '24px' }}>
+            <h2 style={{ color: '#FFF', margin: '0 0 12px 0', fontSize: '22px' }}>Name:</h2>
             <input 
               type="text" value={otherName} onChange={(e) => setOtherName(e.target.value)} placeholder="e.g. Will"
               style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '16px', borderRadius: '12px', border: '2px solid #555', outline: 'none', marginBottom: '20px', boxSizing: 'border-box' }}
@@ -398,7 +358,7 @@ export default function NumerologyWorkbench({ goHome }) {
           </div>
 
           {otherNumbers && (
-            <ReadingCard nums={otherNumbers} name={(otherName || "FRIEND").toUpperCase()} onSave={() => saveReadingToHistory('other')} />
+            <ReadingCard nums={otherNumbers} name={otherName || "Friend"} onSave={() => saveReadingToHistory('other')} />
           )}
         </>
       )}
@@ -407,7 +367,6 @@ export default function NumerologyWorkbench({ goHome }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {history.length === 0 ? <p style={{ color: '#888', textAlign: 'center', fontSize: '20px' }}>No saved readings.</p> : 
             history.map(entry => {
-              const data = NUMEROLOGY_DATA[entry.numbers.lifePath] || { planet: '?', sign: '?' };
               return (
                 <div key={entry.id} style={{ backgroundColor: '#222', border: '2px solid #444', borderRadius: '16px', padding: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
