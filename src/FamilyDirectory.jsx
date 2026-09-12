@@ -1,6 +1,6 @@
-import { Home,  App as CapApp } from '@capacitor/app';
+import { App as CapApp } from '@capacitor/app';
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Phone, User, MapPin, Calendar, Mail, Edit3, Save, Camera, Plus, Trash2, HeartPulse, FileText } from 'lucide-react';
+import { Home,  ArrowLeft, Phone, User, MapPin, Calendar, Mail, Edit3, Save, Camera, Plus, Trash2, HeartPulse, FileText } from 'lucide-react';
 
 export default function FamilyDirectory({ goHome }) {
   const [profile, setProfile] = useState({ photo: '', name: '', address: '', dob: '', email: '', phone: '', notes: '' });

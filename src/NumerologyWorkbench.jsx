@@ -1,6 +1,6 @@
-import { Home,  App as CapApp } from '@capacitor/app';
+import { App as CapApp } from '@capacitor/app';
 import { useState, useEffect, useRef } from 'react';
-import { Calculator, ArrowRight, Delete, Volume2, RefreshCcw, Share2, User, Users, Sparkles, Mic } from 'lucide-react';
+import { Home,  Calculator, ArrowRight, Delete, Volume2, RefreshCcw, Share2, User, Users, Sparkles, Mic } from 'lucide-react';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
 const MEANINGS = {
