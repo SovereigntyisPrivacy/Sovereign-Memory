@@ -1,9 +1,10 @@
-import { App as CapApp } from '@capacitor/app';
 import { useState, useEffect } from 'react';
 import { Home, Copy, Music, Grid as GridIcon, Leaf, Volume2, Play, Settings, Type, Hash, ArrowLeft } from 'lucide-react';
+import { App as CapApp } from '@capacitor/app';
 
 export default function BrainGames({ goHome }) {
   const [activeGame, setActiveGame] = useState('menu');
+
   useEffect(() => {
     const listener = CapApp.addListener('backButton', () => {
       if (activeGame === 'menu' && typeof goHome === 'function') goHome();
@@ -12,7 +13,6 @@ export default function BrainGames({ goHome }) {
     return () => { listener.remove(); };
   }, [activeGame, goHome]);
 
-
   if (activeGame === 'matching') return <MatchingGame goBack={() => setActiveGame('menu')} />;
   if (activeGame === 'sequence') return <SequenceEcho goBack={() => setActiveGame('menu')} />;
   if (activeGame === 'household') return <HouseholdSorter goBack={() => setActiveGame('menu')} />;
@@ -20,9 +20,8 @@ export default function BrainGames({ goHome }) {
   if (activeGame === 'words') return <WordScramble goBack={() => setActiveGame('menu')} />;
   if (activeGame === 'math') return <QuickMath goBack={() => setActiveGame('menu')} />;
 
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px', paddingBottom: '24px', overflowY: 'auto' }}>
       <button onClick={goHome} style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FF9500', padding: '16px 24px', borderRadius: '16px', color: '#000', fontSize: '22px', fontWeight: 'bold', border: 'none', marginBottom: '24px' }}>
         <Home size={24} /> GO HOME
       </button>
@@ -59,11 +58,75 @@ export default function BrainGames({ goHome }) {
   );
 }
 
+// ==========================================
+// 1. SEQUENCE ECHO (SLOW SIMON SAYS)
+// ==========================================
 function SequenceEcho({ goBack }) {
   const [score, setScore] = useState(0);
-  
-  // Exact colors from your screenshot
-  const COLORS = ['#7A2828', '#2E5A2C', '#1C3B5E', '#8B7515']; 
+  const [gameActive, setGameActive] = useState(false);
+  const [sequence, setSequence] = useState([]);
+  const [playerStep, setPlayerStep] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [flashIdx, setFlashIdx] = useState(null);
+  const [message, setMessage] = useState("Watch the pattern,\nthen copy it.");
+
+  const BASE_COLORS = ['#7A2828', '#2E5A2C', '#1C3B5E', '#8B7515']; // Red, Green, Blue, Yellow
+  const FLASH_COLORS = ['#FF6B6B', '#4DFF4D', '#6B6BFF', '#FFDF00']; // Bright versions
+
+  const playSequence = async (seq) => {
+    setIsPlaying(true);
+    setMessage("Watch carefully...");
+    await new Promise(r => setTimeout(r, 1000)); // Pause before starting
+    
+    for (let i = 0; i < seq.length; i++) {
+      setFlashIdx(seq[i]);
+      await new Promise(r => setTimeout(r, 900)); // Very slow flash
+      setFlashIdx(null);
+      await new Promise(r => setTimeout(r, 400)); // Gap between flashes
+    }
+    
+    setIsPlaying(false);
+    setMessage("Your turn!\nCopy the pattern.");
+  };
+
+  const startGame = () => {
+    const nextColor = Math.floor(Math.random() * 4);
+    setSequence([nextColor]);
+    setPlayerStep(0);
+    setScore(0);
+    setGameActive(true);
+    playSequence([nextColor]);
+  };
+
+  const handleTap = async (idx) => {
+    if (!gameActive || isPlaying) return;
+
+    // Flash the tapped color
+    setFlashIdx(idx);
+    setTimeout(() => setFlashIdx(null), 300);
+
+    if (idx !== sequence[playerStep]) {
+      // Wrong Tap
+      setGameActive(false);
+      const feedback = score >= 3 ? "Good job!" : "Don't worry!";
+      setMessage(`${feedback}\n9/10 people can't get past 7.`);
+      return;
+    }
+
+    // Right Tap
+    const nextStep = playerStep + 1;
+    if (nextStep === sequence.length) {
+      // Sequence completed
+      setScore(s => s + 1);
+      setPlayerStep(0);
+      const nextColor = Math.floor(Math.random() * 4);
+      const newSeq = [...sequence, nextColor];
+      setSequence(newSeq);
+      setTimeout(() => playSequence(newSeq), 1200); // Give a beat before next round
+    } else {
+      setPlayerStep(nextStep);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px' }}>
@@ -71,30 +134,51 @@ function SequenceEcho({ goBack }) {
         ← Back to Games
       </button>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        <h2 style={{ color: '#FFF', margin: 0, fontSize: '36px' }}>Score: {score}</h2>
-        <button style={{ backgroundColor: '#333', padding: '16px', borderRadius: '16px', border: 'none', color: '#FFF' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+        <div>
+          <h2 style={{ color: '#FFF', margin: 0, fontSize: '36px', fontWeight: 'bold' }}>Score:</h2>
+          <div style={{ color: '#FFF', fontSize: '36px', fontWeight: 'bold' }}>{score}</div>
+        </div>
+        <button style={{ backgroundColor: '#333', padding: '16px 24px', borderRadius: '16px', border: 'none', color: '#FFF' }}>
           <Volume2 size={32} />
         </button>
       </div>
 
-      <div style={{ textAlign: 'center', fontSize: '32px', color: '#CCC', fontWeight: 'bold', marginBottom: '32px', lineHeight: '1.4' }}>
-        Watch the pattern,<br/>then copy it.
+      <div style={{ textAlign: 'center', fontSize: '28px', color: '#CCC', fontWeight: 'bold', marginBottom: '32px', minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'pre-line' }}>
+        {message}
       </div>
 
-      <button style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', backgroundColor: '#FF9500', padding: '24px', borderRadius: '20px', color: '#000', fontSize: '36px', fontWeight: 'bold', border: 'none', width: '100%', marginBottom: '32px' }}>
-        <Play size={36} fill="#000" /> Start Game
-      </button>
+      {!gameActive && (
+        <button onClick={startGame} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', backgroundColor: '#FF9500', padding: '24px', borderRadius: '20px', color: '#000', fontSize: '36px', fontWeight: 'bold', border: 'none', width: '100%', marginBottom: '32px' }}>
+          <Play size={36} fill="#000" /> Start Game
+        </button>
+      )}
+      {gameActive && <div style={{ height: '90px', marginBottom: '32px' }} />}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', flexGrow: 1 }}>
-        {COLORS.map((col, idx) => (
-          <button key={idx} style={{ backgroundColor: col, borderRadius: '32px', border: 'none', width: '100%', height: '100%', minHeight: '160px' }} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', flexGrow: 1, paddingBottom: '24px' }}>
+        {BASE_COLORS.map((col, idx) => (
+          <button 
+            key={idx} 
+            onClick={() => handleTap(idx)}
+            style={{ 
+              backgroundColor: flashIdx === idx ? FLASH_COLORS[idx] : col, 
+              borderRadius: '32px', 
+              border: flashIdx === idx ? '4px solid #FFF' : 'none', 
+              width: '100%', 
+              height: '100%', 
+              minHeight: '160px',
+              transition: 'background-color 0.2s'
+            }} 
+          />
         ))}
       </div>
     </div>
   );
 }
 
+// ==========================================
+// 2. MATCHING GAME (UI SHELL RESTORED)
+// ==========================================
 function MatchingGame({ goBack }) {
   const [view, setView] = useState('settings'); // 'settings' or 'board'
 
@@ -131,7 +215,6 @@ function MatchingGame({ goBack }) {
     );
   }
 
-  // The Board View (18516.jpg)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
@@ -140,8 +223,7 @@ function MatchingGame({ goBack }) {
           <Settings size={24} /> Reset
         </button>
       </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', flexGrow: 1 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', flexGrow: 1, paddingBottom: '24px' }}>
         {Array(8).fill(0).map((_, i) => (
           <div key={i} style={{ backgroundColor: '#333', borderRadius: '20px', width: '100%', minHeight: '120px', border: '2px solid #444' }} />
         ))}
@@ -150,11 +232,13 @@ function MatchingGame({ goBack }) {
   );
 }
 
+// ==========================================
+// 3. PLACEHOLDERS & EXTRA GAMES
+// ==========================================
 function HouseholdSorter({ goBack }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px', alignItems: 'center', justifyContent: 'center' }}>
       <h2 style={{ color: '#FFF', fontSize: '32px', textAlign: 'center', marginBottom: '24px' }}>Household Sorter</h2>
-      <p style={{ color: '#AAA', fontSize: '20px', textAlign: 'center', marginBottom: '40px' }}>Tap an item, then tap the room it belongs in.</p>
       <button onClick={goBack} style={{ backgroundColor: '#FF9500', padding: '20px 40px', borderRadius: '16px', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none' }}>Back to Menu</button>
     </div>
   );
@@ -164,15 +248,13 @@ function BotanicalSorter({ goBack }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px', alignItems: 'center', justifyContent: 'center' }}>
       <h2 style={{ color: '#FFF', fontSize: '32px', textAlign: 'center', marginBottom: '24px' }}>Botanical Sorter</h2>
-      <p style={{ color: '#AAA', fontSize: '20px', textAlign: 'center', marginBottom: '40px' }}>Sort the plants by type or color.</p>
       <button onClick={goBack} style={{ backgroundColor: '#FF9500', padding: '20px 40px', borderRadius: '16px', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none' }}>Back to Menu</button>
     </div>
   );
 }
 
-
 function WordScramble({ goBack }) {
-  const WORDS = [{ s: 'L I M A Y F', a: 'FAMILY', opts: ['FAMILY', 'FILMY', 'FLAME'] }, { s: 'E A C E P', a: 'PEACE', opts: ['PACE', 'PEACE', 'PIECE'] }, { s: 'E H R A T', a: 'HEART', opts: ['EARTH', 'HEART', 'HEAT'] }];
+  const WORDS = [{ s: 'L I M A Y F', a: 'FAMILY', opts: ['FAMILY', 'FILMY', 'FLAME'] }, { s: 'E A C E P', a: 'PEACE', opts: ['PACE', 'PEACE', 'PIECE'] }];
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
 
