@@ -1,31 +1,42 @@
 import { useState, useEffect } from 'react';
-import { Home, Sparkles, Calculator } from 'lucide-react';
+import { Home, Sparkles, Calculator, User, Users, Edit3, Save } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
 
 export default function NumerologyWorkbench({ goHome }) {
-  const [birthdate, setBirthdate] = useState('');
-  const [lifePath, setLifePath] = useState(null);
+  const [view, setView] = useState('mine'); // 'mine' or 'other'
+  
+  const [myBday, setMyBday] = useState('');
+  const [isEditingMine, setIsEditingMine] = useState(false);
+  
+  const [otherBday, setOtherBday] = useState('');
+  const [otherLifePath, setOtherLifePath] = useState(null);
 
   useEffect(() => {
+    // Automatically load her saved birthday when she opens the app
+    const saved = localStorage.getItem('sovereign_my_bday');
+    if (saved) setMyBday(saved);
+
     const listener = CapApp.addListener('backButton', () => {
       if (typeof goHome === 'function') goHome();
     });
     return () => { listener.remove(); };
   }, [goHome]);
 
-  const calculateLifePath = () => {
-    if (!birthdate) return;
-    
-    // Strip hyphens and add all digits
-    const digits = birthdate.replace(/-/g, '').split('').map(Number);
+  const saveMyBday = () => {
+    if (!myBday) return;
+    localStorage.setItem('sovereign_my_bday', myBday);
+    setIsEditingMine(false);
+  };
+
+  const calculateLifePath = (dateString) => {
+    if (!dateString) return null;
+    const digits = dateString.replace(/-/g, '').split('').map(Number);
     let sum = digits.reduce((a, b) => a + b, 0);
 
-    // Keep reducing until we hit a single digit OR a master number (11, 22, 33)
     while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
       sum = sum.toString().split('').map(Number).reduce((a, b) => a + b, 0);
     }
-    
-    setLifePath(sum);
+    return sum;
   };
 
   const getMeaning = (num) => {
@@ -47,42 +58,89 @@ export default function NumerologyWorkbench({ goHome }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px', paddingBottom: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px', paddingBottom: '24px', overflowY: 'auto' }}>
       <button onClick={goHome} style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FF9500', padding: '16px 24px', borderRadius: '16px', color: '#000', fontSize: '22px', fontWeight: 'bold', border: 'none', marginBottom: '24px' }}>
         <Home size={24} /> GO HOME
       </button>
 
-      <div style={{ backgroundColor: '#222', border: '2px dashed #FF9500', padding: '24px', borderRadius: '24px', textAlign: 'center', marginBottom: '32px' }}>
+      <div style={{ backgroundColor: '#222', border: '2px dashed #FF9500', padding: '24px', borderRadius: '24px', textAlign: 'center', marginBottom: '24px' }}>
         <Sparkles size={40} color="#FF9500" style={{ marginBottom: '12px' }} />
         <h1 style={{ color: '#FFF', margin: '0 0 12px 0', fontSize: '32px' }}>Numerology</h1>
         <p style={{ fontSize: '20px', color: '#CCC', margin: 0, lineHeight: '1.4' }}>
-          Discover the energetic blueprint of your life journey.
+          Discover the energetic blueprint of a life journey.
         </p>
       </div>
 
-      <div style={{ backgroundColor: '#111', padding: '24px', borderRadius: '20px', border: '2px solid #444', marginBottom: '24px' }}>
-        <h2 style={{ color: '#FFF', margin: '0 0 16px 0', fontSize: '24px' }}>Enter Birthdate:</h2>
-        <input 
-          type="date" 
-          value={birthdate} 
-          onChange={(e) => setBirthdate(e.target.value)}
-          style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '28px', padding: '20px', borderRadius: '16px', border: '2px solid #FF9500', outline: 'none', marginBottom: '20px', boxSizing: 'border-box' }}
-        />
-        <button onClick={calculateLifePath} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
-          <Calculator size={28} /> Calculate Path
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+        <button onClick={() => setView('mine')} style={{ flex: 1, backgroundColor: view === 'mine' ? '#FF9500' : '#222', color: view === 'mine' ? '#000' : '#FFF', padding: '16px', borderRadius: '16px', fontSize: '22px', fontWeight: 'bold', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+          <User size={24} /> My Path
+        </button>
+        <button onClick={() => setView('other')} style={{ flex: 1, backgroundColor: view === 'other' ? '#FF9500' : '#222', color: view === 'other' ? '#000' : '#FFF', padding: '16px', borderRadius: '16px', fontSize: '22px', fontWeight: 'bold', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+          <Users size={24} /> Read Another
         </button>
       </div>
 
-      {lifePath && (
-        <div style={{ backgroundColor: '#2E7D32', padding: '32px 24px', borderRadius: '24px', border: '2px solid #1c4a1e', textAlign: 'center', animation: 'fadeIn 0.5s ease-in' }}>
-          <div style={{ color: '#FFD700', fontSize: '18px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>Life Path Number</div>
-          <div style={{ color: '#FFF', fontSize: '72px', fontWeight: 'bold', margin: '16px 0', textShadow: '0px 4px 12px rgba(0,0,0,0.5)' }}>
-            {lifePath}
+      {/* MY PATH VIEW */}
+      {view === 'mine' && (
+        <>
+          {(!myBday || isEditingMine) ? (
+            <div style={{ backgroundColor: '#111', padding: '24px', borderRadius: '20px', border: '2px solid #444' }}>
+              <h2 style={{ color: '#FFF', margin: '0 0 16px 0', fontSize: '24px' }}>Enter Your Birthdate:</h2>
+              <input 
+                type="date" 
+                value={myBday} 
+                onChange={(e) => setMyBday(e.target.value)}
+                style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '28px', padding: '20px', borderRadius: '16px', border: '2px solid #FF9500', outline: 'none', marginBottom: '20px', boxSizing: 'border-box' }}
+              />
+              <button onClick={saveMyBday} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+                <Save size={28} /> Lock in My Path
+              </button>
+            </div>
+          ) : (
+            <div style={{ position: 'relative', backgroundColor: '#2E7D32', padding: '32px 24px', borderRadius: '24px', border: '2px solid #1c4a1e', textAlign: 'center' }}>
+              <button onClick={() => setIsEditingMine(true)} style={{ position: 'absolute', top: '16px', right: '16px', backgroundColor: 'transparent', border: 'none', color: '#A5D6A7' }}>
+                <Edit3 size={28} />
+              </button>
+              <div style={{ color: '#FFD700', fontSize: '18px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>My Life Path</div>
+              <div style={{ color: '#FFF', fontSize: '72px', fontWeight: 'bold', margin: '16px 0', textShadow: '0px 4px 12px rgba(0,0,0,0.5)' }}>
+                {calculateLifePath(myBday)}
+              </div>
+              <p style={{ color: '#E0E0E0', fontSize: '22px', lineHeight: '1.6', margin: 0, fontStyle: 'italic' }}>
+                {getMeaning(calculateLifePath(myBday))}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* READ ANOTHER VIEW */}
+      {view === 'other' && (
+        <>
+          <div style={{ backgroundColor: '#111', padding: '24px', borderRadius: '20px', border: '2px solid #444', marginBottom: '24px' }}>
+            <h2 style={{ color: '#FFF', margin: '0 0 16px 0', fontSize: '24px' }}>Enter Their Birthdate:</h2>
+            <input 
+              type="date" 
+              value={otherBday} 
+              onChange={(e) => setOtherBday(e.target.value)}
+              style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '28px', padding: '20px', borderRadius: '16px', border: '2px solid #FF9500', outline: 'none', marginBottom: '20px', boxSizing: 'border-box' }}
+            />
+            <button onClick={() => setOtherLifePath(calculateLifePath(otherBday))} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+              <Calculator size={28} /> Calculate
+            </button>
           </div>
-          <p style={{ color: '#E0E0E0', fontSize: '22px', lineHeight: '1.6', margin: 0, fontStyle: 'italic' }}>
-            {getMeaning(lifePath)}
-          </p>
-        </div>
+
+          {otherLifePath && (
+            <div style={{ backgroundColor: '#1E3A8A', padding: '32px 24px', borderRadius: '24px', border: '2px solid #1c3b5e', textAlign: 'center' }}>
+              <div style={{ color: '#93C5FD', fontSize: '18px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>Their Life Path</div>
+              <div style={{ color: '#FFF', fontSize: '72px', fontWeight: 'bold', margin: '16px 0', textShadow: '0px 4px 12px rgba(0,0,0,0.5)' }}>
+                {otherLifePath}
+              </div>
+              <p style={{ color: '#E0E0E0', fontSize: '22px', lineHeight: '1.6', margin: 0, fontStyle: 'italic' }}>
+                {getMeaning(otherLifePath)}
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
