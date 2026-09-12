@@ -47,7 +47,7 @@ export default function NumerologyWorkbench({ goHome }) {
 
   const switchView = (newView) => {
     setView(newView);
-    setNotes(''); // Clear notes when switching tabs
+    setNotes('');
   };
 
   const reduceNum = (num) => {
@@ -67,7 +67,12 @@ export default function NumerologyWorkbench({ goHome }) {
     const curM = today.getMonth() + 1;
     const curD = today.getDate();
 
+    // Core Numbers
     const lifePath = reduceNum(dateString);
+    const birthDayNum = reduceNum(d);
+    const attitudeNum = reduceNum(reduceNum(m) + reduceNum(d));
+
+    // Current Cycles
     const personalYear = reduceNum(reduceNum(m) + reduceNum(d) + reduceNum(curY));
     const personalMonth = reduceNum(personalYear + curM);
     const personalDay = reduceNum(personalMonth + curD);
@@ -76,7 +81,11 @@ export default function NumerologyWorkbench({ goHome }) {
     const universalMonth = reduceNum(universalYear + curM);
     const universalDay = reduceNum(universalMonth + curD);
 
-    return { lifePath, personalMonth, personalDay, universalMonth, universalDay };
+    return { 
+      lifePath, birthDayNum, attitudeNum, 
+      personalYear, personalMonth, personalDay, 
+      universalYear, universalMonth, universalDay 
+    };
   };
 
   const saveMyBday = () => {
@@ -133,9 +142,13 @@ export default function NumerologyWorkbench({ goHome }) {
   const exportReading = (name, date, nums, userNotes) => {
     const data = NUMEROLOGY_DATA[nums.lifePath] || { meaning: "A unique path.", planet: "?", sign: "?" };
     let body = `Numerology Blueprint: ${name}\nBirthdate: ${date}\n\n`;
-    body += `Life Path Number: ${nums.lifePath}\nRuling Planet: ${data.planet}\nAstrological Sign: ${data.sign}\n`;
-    body += `Meaning: ${data.meaning}\n\n`;
-    body += `Current Cycles:\n- Personal Month: ${nums.personalMonth}\n- Personal Day: ${nums.personalDay}\n- Universal Month: ${nums.universalMonth}\n- Universal Day: ${nums.universalDay}\n\n`;
+    body += `--- CORE PROFILE ---\n`;
+    body += `Life Path: ${nums.lifePath} (${data.planet} / ${data.sign})\nMeaning: ${data.meaning}\n`;
+    body += `Birth Day Number: ${nums.birthDayNum}\nAttitude Number: ${nums.attitudeNum}\n\n`;
+    body += `--- CURRENT CYCLES ---\n`;
+    body += `Personal: Year ${nums.personalYear} | Month ${nums.personalMonth} | Day ${nums.personalDay}\n`;
+    body += `Universal: Year ${nums.universalYear} | Month ${nums.universalMonth} | Day ${nums.universalDay}\n\n`;
+    
     if (userNotes) body += `My Interpretation:\n${userNotes}`;
     
     window.location.href = `mailto:?subject=Numerology Blueprint: ${encodeURIComponent(name)}&body=${encodeURIComponent(body)}`;
@@ -161,26 +174,55 @@ export default function NumerologyWorkbench({ goHome }) {
           </div>
         </div>
 
-        <p style={{ color: '#E0E0E0', fontSize: '22px', lineHeight: '1.4', margin: '0 0 24px 0', fontStyle: 'italic' }}>
+        <p style={{ color: '#E0E0E0', fontSize: '22px', lineHeight: '1.4', margin: '0 0 32px 0', fontStyle: 'italic' }}>
           "{data.meaning}"
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-          <div style={{ backgroundColor: '#112244', padding: '16px', borderRadius: '16px' }}>
-            <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Personal Month</div>
-            <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.personalMonth}</div>
+        {/* CORE NUMBERS */}
+        <div style={{ backgroundColor: '#112244', padding: '20px', borderRadius: '20px', marginBottom: '24px' }}>
+          <div style={{ color: '#93C5FD', fontSize: '16px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', fontWeight: 'bold' }}>Additional Core Numbers</div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1, backgroundColor: '#1a365d', padding: '16px', borderRadius: '16px' }}>
+              <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Birth Day</div>
+              <div style={{ color: '#FFF', fontSize: '32px', fontWeight: 'bold' }}>{nums.birthDayNum}</div>
+            </div>
+            <div style={{ flex: 1, backgroundColor: '#1a365d', padding: '16px', borderRadius: '16px' }}>
+              <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Attitude</div>
+              <div style={{ color: '#FFF', fontSize: '32px', fontWeight: 'bold' }}>{nums.attitudeNum}</div>
+            </div>
           </div>
-          <div style={{ backgroundColor: '#112244', padding: '16px', borderRadius: '16px' }}>
-            <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Personal Day</div>
-            <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.personalDay}</div>
+        </div>
+
+        {/* CURRENT CYCLES */}
+        <div style={{ backgroundColor: '#112244', padding: '20px', borderRadius: '20px', marginBottom: '24px' }}>
+          <div style={{ color: '#93C5FD', fontSize: '16px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', fontWeight: 'bold' }}>Current Cycles</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
+              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Pers Year</div>
+              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.personalYear}</div>
+            </div>
+            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
+              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Pers Month</div>
+              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.personalMonth}</div>
+            </div>
+            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
+              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Pers Day</div>
+              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.personalDay}</div>
+            </div>
           </div>
-          <div style={{ backgroundColor: '#112244', padding: '16px', borderRadius: '16px' }}>
-            <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Universal Month</div>
-            <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.universalMonth}</div>
-          </div>
-          <div style={{ backgroundColor: '#112244', padding: '16px', borderRadius: '16px' }}>
-            <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Universal Day</div>
-            <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.universalDay}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
+              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Univ Year</div>
+              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.universalYear}</div>
+            </div>
+            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
+              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Univ Month</div>
+              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.universalMonth}</div>
+            </div>
+            <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
+              <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Univ Day</div>
+              <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{nums.universalDay}</div>
+            </div>
           </div>
         </div>
 
