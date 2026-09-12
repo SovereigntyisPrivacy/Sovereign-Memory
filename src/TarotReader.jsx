@@ -3,7 +3,7 @@ import { ArrowLeft, Sparkles, Mic, Share2, Layers, BookOpen, Calendar as CalIcon
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { App as CapApp } from '@capacitor/app';
 
-const TAROT_DECK = [
+const MAJOR_ARCANA = [
   { id: 0, name: "0 - The Fool", num: 0, sign: "Uranus (Air)", meaning: "New beginnings, spontaneity, and a leap of faith into the unknown." },
   { id: 1, name: "I - The Magician", num: 1, sign: "Mercury", meaning: "Manifestation, resourcefulness, and utilizing your inner power." },
   { id: 2, name: "II - The High Priestess", num: 2, sign: "Moon", meaning: "Intuition, sacred knowledge, and the divine feminine mysteries." },
@@ -91,7 +91,7 @@ const MINOR_ARCANA = [
   { id: 77, name: "King of Pentacles", num: 14, sign: "Earth", meaning: "Wealth, business, leadership, security, discipline, and abundance." }
 ];
 
-const TAROT_DECK = [...TAROT_DECK, ...MINOR_ARCANA];
+const TAROT_DECK = [...MAJOR_ARCANA, ...MINOR_ARCANA];
 
 export default function TarotReader({ goHome }) {
   const [view, setView] = useState('menu'); // 'menu', 'daily', 'physical'
