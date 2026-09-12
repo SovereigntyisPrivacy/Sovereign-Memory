@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home, Mic, Trash2, CheckSquare, RotateCcw, Calculator, List, Plus, Clock, User, ChevronUp, ChevronDown, ChevronRight, Activity } from 'lucide-react';
+import { Home, Mic, Trash2, CheckSquare, RotateCcw, List, Plus, Clock, User, ChevronUp, ChevronDown, Activity, History as HistoryIcon } from 'lucide-react';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { App as CapApp } from '@capacitor/app';
@@ -9,14 +9,14 @@ const WIZARD_STEPS = [
   { q: "How many mg is one pill?", key: 'mgPerPill', ph: "e.g., 250", type: 'number' },
   { q: "How many pills to take at once?", key: 'pillsAtOnce', ph: "e.g., 2", type: 'number' },
   { q: "How often?", key: 'frequency', type: 'select', options: ['Once daily', 'Twice daily', 'Three times daily', 'As needed'] },
-  { q: "What time is the first dose?", key: 'time', ph: "e.g., 8:00 AM", type: 'text' },
+  { q: "What time is the first dose?", key: 'time', type: 'time' },
   { q: "What is it for?", key: 'reason', ph: "e.g., Migraine", type: 'text' },
   { q: "Who prescribed it?", key: 'doctor', ph: "e.g., Dr. Smith", type: 'text' },
   { q: "Total pills in the bottle right now?", key: 'remaining', ph: "e.g., 50", type: 'number' }
 ];
 
 export default function MedicationManager({ goHome }) {
-  const [view, setView] = useState('list'); 
+  const [view, setView] = useState('list'); // 'list', 'add', 'history'
   const [meds, setMeds] = useState([]);
   const [wizardStep, setWizardStep] = useState(0);
   const [newMed, setNewMed] = useState({});
@@ -58,17 +58,23 @@ export default function MedicationManager({ goHome }) {
     } catch (e) { console.log("Dictation closed"); } finally { setIsListening(false); }
   };
 
-  const scheduleAlarms = async (med) => {
-    if (med.frequency === 'As needed') return []; // No exact alarms for PRN meds
+  const formatTimeDisplay = (time24) => {
+    if (!time24) return '8:00 AM';
+    const [h, m] = time24.split(':');
+    const hours = parseInt(h, 10);
+    const suffix = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${m} ${suffix}`;
+  };
 
-    const match = (med.time || '8:00 AM').match(/(\d+)(?::(\d+))?\s*(am|pm)?/i);
+  const scheduleAlarms = async (med) => {
+    if (med.frequency === 'As needed') return [];
+
     let h = 8, m = 0;
-    if (match) {
-      h = parseInt(match[1]);
-      m = parseInt(match[2] || 0);
-      const ampm = (match[3] || '').toLowerCase();
-      if (ampm === 'pm' && h < 12) h += 12;
-      if (ampm === 'am' && h === 12) h = 0;
+    if (med.time) {
+      const [hours, minutes] = med.time.split(':');
+      h = parseInt(hours, 10);
+      m = parseInt(minutes, 10);
     }
 
     const baseId = Math.floor(Math.random() * 100000);
@@ -104,8 +110,8 @@ export default function MedicationManager({ goHome }) {
   };
 
   const finalizeMed = async () => {
-    // Set default drop-down value if user didn't change it
     if (!newMed.frequency) newMed.frequency = 'Once daily';
+    if (!newMed.time && newMed.frequency !== 'As needed') newMed.time = '08:00';
 
     const alarmIds = await scheduleAlarms(newMed);
     const finalMed = { 
@@ -125,7 +131,12 @@ export default function MedicationManager({ goHome }) {
 
   const logDose = (med) => {
     const now = new Date();
-    const logEntry = { id: Date.now(), timestamp: now.getTime(), timeStr: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), dateStr: now.toLocaleDateString() };
+    const logEntry = { 
+      id: Date.now(), 
+      timestamp: now.getTime(), 
+      timeStr: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), 
+      dateStr: now.toLocaleDateString() 
+    };
     
     const updated = meds.map(m => {
       if (m.id === med.id) {
@@ -155,8 +166,7 @@ export default function MedicationManager({ goHome }) {
   };
 
   const deleteMed = (id) => {
-    if(window.confirm("Remove this medication?")) {
-      // Need to cancel alarms here ideally
+    if(window.confirm("Remove this medication permanently?")) {
       saveMeds(meds.filter(m => m.id !== id));
     }
   };
@@ -178,7 +188,7 @@ export default function MedicationManager({ goHome }) {
         </button>
 
         <h1 style={{ color: '#FFF', fontSize: '32px', margin: '0 0 32px 0' }}>Adding Medication</h1>
-        <h2 style={{ color: '#CCC', fontSize: '22px', fontWeight: 'normal', margin: '0 0 16px 0' }}>{currentQ.q}</h2>
+        <h2 style={{ color: '#CCC', fontSize: '24px', fontWeight: 'normal', margin: '0 0 24px 0' }}>{currentQ.q}</h2>
 
         <div style={{ display: 'flex', gap: '12px', marginBottom: '40px' }}>
           {currentQ.type === 'select' ? (
@@ -189,6 +199,13 @@ export default function MedicationManager({ goHome }) {
             >
               {currentQ.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
+          ) : currentQ.type === 'time' ? (
+            <input 
+              type="time"
+              value={val} 
+              onChange={e => setNewMed({...newMed, [currentQ.key]: e.target.value})} 
+              style={{ flexGrow: 1, backgroundColor: '#222', color: '#FFF', fontSize: '32px', padding: '20px', borderRadius: '16px', border: '2px solid #FF9500', outline: 'none', textAlign: 'center' }} 
+            />
           ) : (
             <>
               <input 
@@ -219,6 +236,36 @@ export default function MedicationManager({ goHome }) {
     );
   }
 
+  if (view === 'history') {
+    const allLogs = meds.flatMap(m => (m.logs || []).map(l => ({ ...l, medName: m.name })))
+                        .sort((a, b) => b.timestamp - a.timestamp);
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px' }}>
+        <button onClick={() => setView('list')} style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '16px 24px', borderRadius: '16px', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none', marginBottom: '24px' }}>
+          <ArrowLeft size={24} /> Back
+        </button>
+        <h1 style={{ color: '#FF9500', fontSize: '32px', margin: '0 0 24px 0' }}>Medication History</h1>
+        
+        <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '24px' }}>
+          {allLogs.length === 0 ? <p style={{ color: '#888', textAlign: 'center', fontSize: '20px' }}>No doses logged yet.</p> : 
+            allLogs.map(log => (
+              <div key={log.id} style={{ backgroundColor: '#222', borderLeft: '6px solid #2E7D32', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>{log.medName}</div>
+                  <div style={{ color: '#AAA', fontSize: '18px' }}>{log.dateStr}</div>
+                </div>
+                <div style={{ color: '#FF9500', fontSize: '24px', fontWeight: 'bold' }}>
+                  {log.timeStr}
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px', paddingBottom: '24px', overflowY: 'auto' }}>
       <button onClick={goHome} style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FF9500', padding: '16px 24px', borderRadius: '16px', color: '#000', fontSize: '22px', fontWeight: 'bold', border: 'none', marginBottom: '24px' }}>
@@ -226,8 +273,9 @@ export default function MedicationManager({ goHome }) {
       </button>
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
-        <button style={{ flex: 1, backgroundColor: '#FF9500', color: '#000', padding: '16px', borderRadius: '12px', fontSize: '20px', fontWeight: 'bold', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}><List size={24}/> My Tracker</button>
-        <button onClick={() => setView('add')} style={{ flex: 1, backgroundColor: '#222', border: '2px solid #FF9500', color: '#FFF', padding: '16px', borderRadius: '12px', fontSize: '20px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}><Plus size={24} color="#FF9500"/> Add Med</button>
+        <button onClick={() => setView('list')} style={{ flex: 1, backgroundColor: '#FF9500', color: '#000', padding: '16px', borderRadius: '12px', fontSize: '20px', fontWeight: 'bold', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}><List size={24}/> Tracker</button>
+        <button onClick={() => setView('history')} style={{ flex: 1, backgroundColor: '#222', border: '2px solid #555', color: '#FFF', padding: '16px', borderRadius: '12px', fontSize: '20px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}><HistoryIcon size={24}/> History</button>
+        <button onClick={() => setView('add')} style={{ backgroundColor: '#222', border: '2px solid #FF9500', color: '#FFF', padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Plus size={28} color="#FF9500"/></button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -236,22 +284,21 @@ export default function MedicationManager({ goHome }) {
             const todaysLogs = (med.logs || []).filter(l => isToday(l.timestamp));
             const isExpanded = expandedMeds[med.id];
             const totalMg = med.pillsAtOnce * med.mgPerPill;
+            const displayTime = formatTimeDisplay(med.time);
             
             return (
               <div key={med.id} style={{ backgroundColor: '#2E7D32', borderRadius: '24px', border: '2px solid #1c4a1e', overflow: 'hidden' }}>
                 
-                {/* Always Visible Header Card */}
                 <div onClick={() => toggleExpand(med.id)} style={{ padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#266929' }}>
                   <div>
                     <div style={{ fontSize: '32px', color: '#FFF', fontWeight: 'bold', marginBottom: '8px' }}>{med.name}</div>
                     <div style={{ fontSize: '20px', color: '#E0E0E0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Clock size={20} color="#FF9500" /> {med.time} | {med.frequency}
+                      <Clock size={20} color="#FF9500" /> {displayTime} | {med.frequency}
                     </div>
                   </div>
                   {isExpanded ? <ChevronUp size={40} color="#FFF" /> : <ChevronDown size={40} color="#FFF" />}
                 </div>
 
-                {/* Collapsible Details Area */}
                 {isExpanded && (
                   <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '2px solid #1c4a1e' }}>
                     
@@ -288,7 +335,6 @@ export default function MedicationManager({ goHome }) {
                   </div>
                 )}
 
-                {/* Always Visible Action Footer */}
                 <div style={{ padding: '16px 24px', backgroundColor: '#1c4a1e' }}>
                   <button onClick={() => logDose(med)} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '26px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
                     <CheckSquare size={32} /> Log Dose Now
