@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Sparkles, Mic, Share2, Layers, BookOpen, Calendar as CalIcon, Save, List, Clock, Search, Trash2, ChevronDown, ChevronUp, User } from 'lucide-react';
+import {  ArrowLeft, Sparkles, Mic, Share2, Layers, BookOpen, Calendar as CalIcon, Save, List, Clock, Search, Trash2, ChevronDown, ChevronUp, User  } from 'lucide-react';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { App as CapApp } from '@capacitor/app';
 
@@ -103,7 +103,6 @@ export default function TarotReader({ goHome }) {
   const [readingQuestion, setReadingQuestion] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [history, setHistory] = useState([]);
-  
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedEntry, setExpandedEntry] = useState(null);
 
@@ -119,15 +118,21 @@ export default function TarotReader({ goHome }) {
     if (n.includes('cups')) return 'Water';
     if (n.includes('swords')) return 'Air';
     if (n.includes('pentacles') || n.includes('coins')) return 'Earth';
+    const fireMajors = ['emperor', 'strength', 'wheel', 'temperance', 'tower', 'sun', 'judgement'];
+    const waterMajors = ['priestess', 'chariot', 'hanged', 'death', 'moon'];
+    const airMajors = ['fool', 'magician', 'lovers', 'justice', 'star'];
+    const earthMajors = ['empress', 'hierophant', 'hermit', 'devil', 'world'];
+    if (fireMajors.some(m => n.includes(m))) return 'Fire';
+    if (waterMajors.some(m => n.includes(m))) return 'Water';
+    if (airMajors.some(m => n.includes(m))) return 'Air';
+    if (earthMajors.some(m => n.includes(m))) return 'Earth';
     return '?'; 
   };
 
   const getTrueAstrology = (card) => {
     if (card.sign && !['Fire', 'Water', 'Earth', 'Air'].includes(card.sign)) return card.sign;
-    
     const n = card.name.toLowerCase();
     if (n.includes('ace ') || n.includes('page ') || n.includes('knight ') || n.includes('queen ') || n.includes('king ')) return null;
-
     let num = '';
     if (n.includes('two') || n.includes(' 2')) num = '2';
     if (n.includes('three') || n.includes(' 3')) num = '3';
@@ -138,15 +143,12 @@ export default function TarotReader({ goHome }) {
     if (n.includes('eight') || n.includes(' 8')) num = '8';
     if (n.includes('nine') || n.includes(' 9')) num = '9';
     if (n.includes('ten') || n.includes(' 10')) num = '10';
-
     let suit = '';
     if (n.includes('wand')) suit = 'Wands';
     if (n.includes('cup')) suit = 'Cups';
     if (n.includes('sword')) suit = 'Swords';
     if (n.includes('pentacle') || n.includes('coin')) suit = 'Pentacles';
-
     const key = num + ' of ' + suit;
-    
     const DECAN_MAP = {
       "2 of Wands": "Mars in Aries", "3 of Wands": "Sun in Aries", "4 of Wands": "Venus in Aries",
       "5 of Wands": "Saturn in Leo", "6 of Wands": "Jupiter in Leo", "7 of Wands": "Mars in Leo",
@@ -161,28 +163,18 @@ export default function TarotReader({ goHome }) {
       "5 of Pentacles": "Mercury in Taurus", "6 of Pentacles": "Moon in Taurus", "7 of Pentacles": "Saturn in Taurus",
       "8 of Pentacles": "Sun in Virgo", "9 of Pentacles": "Venus in Virgo", "10 of Pentacles": "Mercury in Virgo"
     };
-
     return DECAN_MAP[key] || null;
   };
-
   const drawDailyCard = () => {
     const randomBuffer = new Uint32Array(1);
     window.crypto.getRandomValues(randomBuffer);
-    const randomIndex = randomBuffer[0] % TAROT_DECK.length;
-    
-    setDrawnCard(TAROT_DECK[randomIndex]);
-    setNotes('');
-    setReadingSubject('Myself');
-    setReadingQuestion('Daily Draw Focus');
-    setView('daily');
+    setDrawnCard(TAROT_DECK[randomBuffer[0] % TAROT_DECK.length]);
+    setNotes(''); setReadingSubject('Myself'); setReadingQuestion('Daily Draw Focus'); setView('daily');
   };
 
   const togglePhysicalCard = (card) => {
-    if (selectedCards.some(c => c.id === card.id)) {
-      setSelectedCards(selectedCards.filter(c => c.id !== card.id));
-    } else {
-      setSelectedCards([...selectedCards, card]);
-    }
+    if (selectedCards.some(c => c.id === card.id)) setSelectedCards(selectedCards.filter(c => c.id !== card.id));
+    else setSelectedCards([...selectedCards, card]);
   };
 
   const toggleDictation = async () => {
@@ -190,7 +182,7 @@ export default function TarotReader({ goHome }) {
       const { speechRecognition } = await SpeechRecognition.requestPermissions();
       if (speechRecognition !== 'granted') return alert("Microphone permission needed.");
       setIsListening(true);
-      const result = await SpeechRecognition.start({ language: "en-US", prompt: "Speak your interpretation...", partialResults: false, popup: true });
+      const result = await SpeechRecognition.start({ language: "en-US", prompt: "Speak...", partialResults: false, popup: true });
       if (result && result.matches && result.matches.length > 0) setNotes(prev => (prev + ' ' + result.matches[0]).trim());
     } catch (e) { console.log("Dictation closed"); } finally { setIsListening(false); }
   };
@@ -198,17 +190,11 @@ export default function TarotReader({ goHome }) {
   const saveReading = () => {
     if (view === 'daily' && !drawnCard) return;
     if (view === 'physical' && selectedCards.length === 0) return alert("Select cards first!");
-    
     const now = new Date();
     const newEntry = {
-      id: Date.now(),
-      type: view,
-      subject: readingSubject || 'Myself',
-      question: readingQuestion || '',
-      dateStr: view === 'physical' ? readingDate : now.toLocaleDateString(),
-      timeStr: now.toLocaleTimeString(),
-      cards: view === 'daily' ? [drawnCard] : selectedCards,
-      notes: notes
+      id: Date.now(), type: view, subject: readingSubject || 'Myself', question: readingQuestion || '',
+      dateStr: view === 'physical' ? readingDate : now.toLocaleDateString(), timeStr: now.toLocaleTimeString(),
+      cards: view === 'daily' ? [drawnCard] : selectedCards, notes: notes
     };
     const updatedHistory = [newEntry, ...history];
     localStorage.setItem('sovereign_tarot_history', JSON.stringify(updatedHistory));
@@ -232,7 +218,8 @@ export default function TarotReader({ goHome }) {
     entry.cards.forEach(c => { 
       const el = c.element || getDerivedElement(c.name);
       const astro = getTrueAstrology(c);
-      body += `- ${c.name}\n  Meaning: ${c.meaning}\n  Numerology: ${c.num || '?'}`;
+      const displayNum = c.num !== undefined && c.num !== null ? c.num : '?';
+      body += `- ${c.name}\n  Meaning: ${c.meaning}\n  Numerology: ${displayNum}`;
       if (astro) body += ` | Astrology: ${astro}`;
       body += ` | Element: ${el}\n\n`; 
     });
@@ -243,7 +230,6 @@ export default function TarotReader({ goHome }) {
   const exportCurrentReading = () => {
     if (view === 'daily' && !drawnCard) return;
     if (view === 'physical' && selectedCards.length === 0) return alert("Select cards first!");
-    
     const cardsToExport = view === 'daily' ? [drawnCard] : selectedCards;
     let body = `${view === 'daily' ? 'Daily Tarot Draw' : 'Physical Tarot Reading'}\nDate: ${view === 'physical' ? readingDate : new Date().toLocaleDateString()}\nReading For: ${readingSubject || 'Myself'}\n`;
     if (readingQuestion) body += `Question/Focus: ${readingQuestion}\n`;
@@ -251,7 +237,8 @@ export default function TarotReader({ goHome }) {
     cardsToExport.forEach(c => { 
       const el = c.element || getDerivedElement(c.name);
       const astro = getTrueAstrology(c);
-      body += `- ${c.name}\n  Meaning: ${c.meaning}\n  Numerology: ${c.num || '?'}`;
+      const displayNum = c.num !== undefined && c.num !== null ? c.num : '?';
+      body += `- ${c.name}\n  Meaning: ${c.meaning}\n  Numerology: ${displayNum}`;
       if (astro) body += ` | Astrology: ${astro}`;
       body += ` | Element: ${el}\n\n`;
     });
@@ -268,46 +255,28 @@ export default function TarotReader({ goHome }) {
   const MetadataTags = ({ card }) => {
     const el = card.element || getDerivedElement(card.name);
     const astro = getTrueAstrology(card);
+    const displayNum = card.num !== undefined && card.num !== null ? card.num : '?';
     return (
       <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
-        <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>NUM</span>
-          <span style={{ color: '#FFD700', fontSize: '16px', fontWeight: 'bold' }}>{card.num || '?'}</span>
-        </div>
-        {astro && (
-          <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>ASTROLOGY</span>
-            <span style={{ color: '#93C5FD', fontSize: '16px', fontWeight: 'bold' }}>{astro}</span>
-          </div>
-        )}
-        <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>ELEMENT</span>
-          <span style={{ color: '#4ADE80', fontSize: '16px', fontWeight: 'bold' }}>{el}</span>
-        </div>
+        <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>NUM</span><span style={{ color: '#FFD700', fontSize: '16px', fontWeight: 'bold' }}>{displayNum}</span></div>
+        {astro && <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>ASTROLOGY</span><span style={{ color: '#93C5FD', fontSize: '16px', fontWeight: 'bold' }}>{astro}</span></div>}
+        <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>ELEMENT</span><span style={{ color: '#4ADE80', fontSize: '16px', fontWeight: 'bold' }}>{el}</span></div>
       </div>
     );
   };
-
   if (view === 'history') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '24px', paddingTop: '12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <button onClick={() => setView('menu')} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '14px 20px', borderRadius: '16px', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none' }}>
-            <ArrowLeft size={24} /> Back
-          </button>
+          <button onClick={() => setView('menu')} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '14px 20px', borderRadius: '16px', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none' }}><ArrowLeft size={24} /> Back</button>
           <h2 style={{ margin: 0, color: '#FF9500', fontSize: '26px' }}>My Grimoire</h2>
         </div>
-
         <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#222', padding: '12px 16px', borderRadius: '16px', border: '2px solid #555', marginBottom: '24px' }}>
           <Search size={24} color="#888" style={{ marginRight: '12px' }} />
-          <input type="text" placeholder="Search by Date, Name, or Question..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '20px', outline: 'none', width: '100%' }} />
+          <input type="text" placeholder="Search Readings..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '20px', outline: 'none', width: '100%' }} />
         </div>
-
         <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {filteredHistory.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#888', fontSize: '20px', marginTop: '40px' }}>No readings found.</p>
-          ) : (
-            filteredHistory.map(entry => (
+          {filteredHistory.length === 0 ? <p style={{ textAlign: 'center', color: '#888', fontSize: '20px' }}>No readings found.</p> : filteredHistory.map(entry => (
               <div key={entry.id} style={{ backgroundColor: '#1E1E1E', borderRadius: '16px', border: '2px solid #FF9500', overflow: 'hidden' }}>
                 <button onClick={() => setExpandedEntry(expandedEntry === entry.id ? null : entry.id)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', backgroundColor: '#111', border: 'none', color: '#FFF' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
@@ -316,50 +285,29 @@ export default function TarotReader({ goHome }) {
                   </div>
                   {expandedEntry === entry.id ? <ChevronUp size={32} color="#FF9500"/> : <ChevronDown size={32} color="#FF9500"/>}
                 </button>
-
                 {expandedEntry === entry.id && (
                   <div style={{ padding: '20px', borderTop: '2px solid #333' }}>
-                    <div style={{ fontSize: '20px', color: '#FFF', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#222', padding: '12px', borderRadius: '12px' }}>
-                      <User size={24} color="#FF9500"/> <strong>Reading For:</strong> {entry.subject}
-                    </div>
-
-                    {entry.question && (
-                      <div style={{ fontSize: '20px', color: '#FFF', marginBottom: '20px', backgroundColor: '#222', padding: '12px', borderRadius: '12px', borderLeft: '4px solid #93C5FD' }}>
-                        <strong style={{ color: '#93C5FD' }}>Question / Focus:</strong><br/>
-                        <span style={{ fontStyle: 'italic', marginTop: '4px', display: 'block' }}>"{entry.question}"</span>
-                      </div>
-                    )}
-
+                    <div style={{ fontSize: '20px', color: '#FFF', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#222', padding: '12px', borderRadius: '12px' }}><User size={24} color="#FF9500"/> <strong>For:</strong> {entry.subject}</div>
+                    {entry.question && <div style={{ fontSize: '20px', color: '#FFF', marginBottom: '20px', backgroundColor: '#222', padding: '12px', borderRadius: '12px', borderLeft: '4px solid #93C5FD' }}><strong style={{ color: '#93C5FD' }}>Focus:</strong><br/><span style={{ fontStyle: 'italic' }}>"{entry.question}"</span></div>}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
                       {entry.cards.map(c => (
                         <div key={c.id} style={{ backgroundColor: '#222', padding: '16px', borderRadius: '12px', borderLeft: '4px solid #FF9500' }}>
                           <div style={{ color: '#FF9500', fontSize: '22px', fontWeight: 'bold', marginBottom: '8px' }}>{c.name}</div>
-                          <div style={{ color: '#E0E0E0', fontSize: '18px', lineHeight: '1.4' }}>{c.meaning}</div>
+                          <div style={{ color: '#E0E0E0', fontSize: '18px' }}>{c.meaning}</div>
                           <MetadataTags card={c} />
                         </div>
                       ))}
                     </div>
-
-                    {entry.notes && (
-                      <div style={{ backgroundColor: '#222', padding: '16px', borderRadius: '12px', marginBottom: '24px', borderLeft: '4px solid #FFD700' }}>
-                        <div style={{ color: '#CCC', fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>Interpretation:</div>
-                        <p style={{ color: '#FFF', fontSize: '20px', fontStyle: 'italic', margin: 0, lineHeight: '1.4' }}>"{entry.notes}"</p>
-                      </div>
-                    )}
-
+                    {entry.notes && <div style={{ backgroundColor: '#222', padding: '16px', borderRadius: '12px', marginBottom: '24px', borderLeft: '4px solid #FFD700' }}><div style={{ color: '#CCC', fontSize: '18px', fontWeight: 'bold' }}>Interpretation:</div><p style={{ color: '#FFF', fontSize: '20px', fontStyle: 'italic', margin: 0 }}>"{entry.notes}"</p></div>}
                     <div style={{ display: 'flex', gap: '12px' }}>
-                      <button onClick={() => deleteEntry(entry.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#441111', border: '2px solid #FF3B30', borderRadius: '12px', padding: '16px', color: '#FF3B30', fontSize: '20px', fontWeight: 'bold' }}>
-                        <Trash2 size={24} /> Delete
-                      </button>
-                      <button onClick={() => exportSingleEntry(entry)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '16px', color: '#3B82F6', fontSize: '20px', fontWeight: 'bold' }}>
-                        <Share2 size={24} /> Export
-                      </button>
+                      <button onClick={() => deleteEntry(entry.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#441111', border: '2px solid #FF3B30', borderRadius: '12px', padding: '16px', color: '#FF3B30', fontSize: '20px', fontWeight: 'bold' }}><Trash2 size={24} /> Delete</button>
+                      <button onClick={() => exportSingleEntry(entry)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '16px', color: '#3B82F6', fontSize: '20px', fontWeight: 'bold' }}><Share2 size={24} /> Export</button>
                     </div>
                   </div>
                 )}
               </div>
             ))
-          )}
+          }
         </div>
       </div>
     );
@@ -367,34 +315,20 @@ export default function TarotReader({ goHome }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '24px', paddingTop: '12px', overflowY: 'auto' }}>
-      
       {view === 'menu' && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <button onClick={goHome} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '14px 20px', borderRadius: '16px', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none' }}>
-              <ArrowLeft size={24} /> Home
-            </button>
-            <h2 style={{ color: '#FF9500', margin: 0, fontSize: '26px' }}>Tarot Workbench</h2>
+            <button onClick={goHome} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '14px 20px', borderRadius: '16px', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none' }}><ArrowLeft size={24} /> Home</button>
+            <h2 style={{ color: '#FF9500', margin: 0, fontSize: '26px' }}>Tarot</h2>
           </div>
           <div style={{ backgroundColor: '#222', border: '2px dashed #FF9500', padding: '24px', borderRadius: '24px', textAlign: 'center', marginBottom: '32px' }}>
             <Sparkles size={32} color="#FF9500" style={{ marginBottom: '12px' }} />
-            <p style={{ fontSize: '24px', fontStyle: 'italic', color: '#FFF', margin: 0, lineHeight: '1.4', fontFamily: 'serif' }}>
-              "We partake of the High Priestess every time we read the cards."
-            </p>
+            <p style={{ fontSize: '24px', fontStyle: 'italic', color: '#FFF', margin: 0, fontFamily: 'serif' }}>"We partake of the High Priestess every time we read the cards."</p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flexGrow: 1, justifyContent: 'center' }}>
-            <button onClick={drawDailyCard} style={{ backgroundColor: '#1E1E1E', border: '4px solid #FF9500', borderRadius: '24px', padding: '32px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 8px 24px rgba(255, 149, 0, 0.2)' }}>
-              <Layers size={48} color="#FF9500" />
-              <div style={{ textAlign: 'left' }}><div style={{ fontSize: '26px', fontWeight: 'bold', color: '#FFF' }}>Draw Daily Card</div><div style={{ fontSize: '18px', color: '#AAA' }}>Pull a digital card for today</div></div>
-            </button>
-            <button onClick={() => { setView('physical'); setSelectedCards([]); setNotes(''); setReadingSubject('Myself'); setReadingQuestion(''); }} style={{ backgroundColor: '#2E7D32', border: 'none', borderRadius: '24px', padding: '32px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)' }}>
-              <BookOpen size={48} color="#FFF" />
-              <div style={{ textAlign: 'left' }}><div style={{ fontSize: '26px', fontWeight: 'bold', color: '#FFF' }}>Physical Reading</div><div style={{ fontSize: '18px', color: '#CCC' }}>Record your own deck</div></div>
-            </button>
-            <button onClick={() => { setView('history'); setSearchQuery(''); }} style={{ backgroundColor: '#1E3A8A', border: 'none', borderRadius: '24px', padding: '32px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)' }}>
-              <List size={48} color="#FFF" />
-              <div style={{ textAlign: 'left' }}><div style={{ fontSize: '26px', fontWeight: 'bold', color: '#FFF' }}>My Grimoire</div><div style={{ fontSize: '18px', color: '#CCC' }}>View past saved readings</div></div>
-            </button>
+            <button onClick={drawDailyCard} style={{ backgroundColor: '#1E1E1E', border: '4px solid #FF9500', borderRadius: '24px', padding: '32px', display: 'flex', alignItems: 'center', gap: '20px' }}><Layers size={48} color="#FF9500" /><div style={{ textAlign: 'left' }}><div style={{ fontSize: '26px', fontWeight: 'bold', color: '#FFF' }}>Daily Card</div><div style={{ fontSize: '18px', color: '#AAA' }}>Pull a digital card</div></div></button>
+            <button onClick={() => { setView('physical'); setSelectedCards([]); setNotes(''); setReadingSubject('Myself'); setReadingQuestion(''); }} style={{ backgroundColor: '#2E7D32', border: 'none', borderRadius: '24px', padding: '32px', display: 'flex', alignItems: 'center', gap: '20px' }}><BookOpen size={48} color="#FFF" /><div style={{ textAlign: 'left' }}><div style={{ fontSize: '26px', fontWeight: 'bold', color: '#FFF' }}>Physical Reading</div><div style={{ fontSize: '18px', color: '#CCC' }}>Record your deck</div></div></button>
+            <button onClick={() => { setView('history'); setSearchQuery(''); }} style={{ backgroundColor: '#1E3A8A', border: 'none', borderRadius: '24px', padding: '32px', display: 'flex', alignItems: 'center', gap: '20px' }}><List size={48} color="#FFF" /><div style={{ textAlign: 'left' }}><div style={{ fontSize: '26px', fontWeight: 'bold', color: '#FFF' }}>My Grimoire</div><div style={{ fontSize: '18px', color: '#CCC' }}>View past readings</div></div></button>
           </div>
         </>
       )}
@@ -402,29 +336,20 @@ export default function TarotReader({ goHome }) {
       {(view === 'daily' || view === 'physical') && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <button onClick={() => setView('menu')} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '14px 20px', borderRadius: '16px', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none' }}>
-              <ArrowLeft size={24} /> Back
-            </button>
+            <button onClick={() => setView('menu')} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '14px 20px', borderRadius: '16px', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none' }}><ArrowLeft size={24} /> Back</button>
             <h2 style={{ color: '#FF9500', margin: 0, fontSize: '22px' }}>{view === 'daily' ? 'Daily Draw' : 'Physical Reading'}</h2>
           </div>
 
           {view === 'physical' && (
             <>
-              <div style={{ backgroundColor: '#222', padding: '16px', borderRadius: '20px', border: '2px solid #555', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <Calendar size={32} color="#FF9500" />
-                <input type="date" value={readingDate} onChange={(e) => setReadingDate(e.target.value)} style={{ flexGrow: 1, backgroundColor: 'transparent', color: '#FFF', border: 'none', fontSize: '24px', outline: 'none' }} />
-              </div>
+              <div style={{ backgroundColor: '#222', padding: '16px', borderRadius: '20px', border: '2px solid #555', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}><Calendar size={32} color="#FF9500" /><input type="date" value={readingDate} onChange={(e) => setReadingDate(e.target.value)} style={{ flexGrow: 1, backgroundColor: 'transparent', color: '#FFF', border: 'none', fontSize: '24px', outline: 'none' }} /></div>
               <h3 style={{ margin: '0 0 12px 0', fontSize: '24px', color: '#FFF' }}>Question / Focus (Optional):</h3>
-              <input type="text" value={readingQuestion} onChange={(e) => setReadingQuestion(e.target.value)} placeholder="e.g. What is my focus for today?" style={{ width: '100%', backgroundColor: '#222', border: '2px solid #555', color: '#FFF', fontSize: '22px', padding: '16px', borderRadius: '16px', marginBottom: '24px', outline: 'none', boxSizing: 'border-box' }} />
+              <input type="text" value={readingQuestion} onChange={(e) => setReadingQuestion(e.target.value)} placeholder="e.g. Focus for today?" style={{ width: '100%', backgroundColor: '#222', border: '2px solid #555', color: '#FFF', fontSize: '22px', padding: '16px', borderRadius: '16px', marginBottom: '24px', outline: 'none', boxSizing: 'border-box' }} />
               <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', color: '#FFF' }}>1. Select Cards Pulled:</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '32px' }}>
                 {TAROT_DECK.map(card => {
                   const isSelected = selectedCards.some(c => c.id === card.id);
-                  return (
-                    <button key={card.id} onClick={() => togglePhysicalCard(card)} style={{ backgroundColor: isSelected ? '#FF9500' : '#111', color: isSelected ? '#000' : '#FFF', border: isSelected ? '2px solid #FF9500' : '2px solid #444', borderRadius: '12px', padding: '16px 8px', fontSize: '18px', fontWeight: 'bold', textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80px' }}>
-                      {card.name.split(' - ')[1] || card.name}
-                    </button>
-                  );
+                  return <button key={card.id} onClick={() => togglePhysicalCard(card)} style={{ backgroundColor: isSelected ? '#FF9500' : '#111', color: isSelected ? '#000' : '#FFF', border: isSelected ? '2px solid #FF9500' : '2px solid #444', borderRadius: '12px', padding: '16px 8px', fontSize: '18px', fontWeight: 'bold', minHeight: '80px' }}>{card.name.split(' - ')[1] || card.name}</button>;
                 })}
               </div>
             </>
@@ -443,9 +368,7 @@ export default function TarotReader({ goHome }) {
                 <div style={{ backgroundColor: '#1E1E1E', border: '2px solid #FF9500', borderRadius: '24px', padding: '32px', textAlign: 'center', marginBottom: '24px' }}>
                   <h3 style={{ color: '#FF9500', fontSize: '32px', marginBottom: '16px', marginTop: 0 }}>{drawnCard.name}</h3>
                   <p style={{ color: '#FFF', fontSize: '22px', lineHeight: '1.5', margin: '0 0 20px 0' }}>{drawnCard.meaning}</p>
-                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <MetadataTags card={drawnCard} />
-                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}><MetadataTags card={drawnCard} /></div>
                 </div>
               )}
 
@@ -464,25 +387,16 @@ export default function TarotReader({ goHome }) {
 
               <div style={{ marginBottom: '20px' }}>
                 <h3 style={{ margin: '0 0 12px 0', fontSize: '24px', color: '#FFF' }}>Reading For:</h3>
-                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#222', padding: '12px 16px', borderRadius: '16px', border: '2px solid #555' }}>
-                  <User size={28} color="#FF9500" style={{ marginRight: '12px' }} />
-                  <input type="text" value={readingSubject} onChange={(e) => setReadingSubject(e.target.value)} placeholder="Myself, A Friend, etc..." style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '22px', width: '100%', outline: 'none' }} />
-                </div>
+                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#222', padding: '12px 16px', borderRadius: '16px', border: '2px solid #555' }}><User size={28} color="#FF9500" style={{ marginRight: '12px' }} /><input type="text" value={readingSubject} onChange={(e) => setReadingSubject(e.target.value)} placeholder="Myself, Friend..." style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '22px', width: '100%', outline: 'none' }} /></div>
               </div>
 
               <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', color: '#FFF' }}>My Interpretation:</h3>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Tap to type, or hit Dictate..." style={{ width: '100%', minHeight: '160px', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '20px', borderRadius: '20px', border: '2px solid #555', resize: 'none', marginBottom: '20px', boxSizing: 'border-box' }} />
-              <button onClick={toggleDictation} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: isListening ? '#FF9500' : '#333', border: '2px solid #FF9500', borderRadius: '16px', padding: '20px', color: isListening ? '#000' : '#FFF', fontSize: '22px', fontWeight: 'bold', marginBottom: '24px' }}>
-                <Mic size={28} color={isListening ? '#000' : '#FF9500'} /> {isListening ? 'Listening...' : 'Dictate'}
-              </button>
+              <button onClick={toggleDictation} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: isListening ? '#FF9500' : '#333', border: '2px solid #FF9500', borderRadius: '16px', padding: '20px', color: isListening ? '#000' : '#FFF', fontSize: '22px', fontWeight: 'bold', marginBottom: '24px' }}><Mic size={28} color={isListening ? '#000' : '#FF9500'} /> {isListening ? 'Listening...' : 'Dictate'}</button>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <button onClick={exportCurrentReading} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: '#2E7D32', border: 'none', borderRadius: '16px', padding: '20px', color: '#FFF', fontSize: '22px', fontWeight: 'bold' }}>
-                  <Share2 size={28} /> Export Full Reading
-                </button>
-                <button onClick={saveReading} style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: '2px solid #555', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
-                  <Save size={24} /> Save to Grimoire
-                </button>
+                <button onClick={exportCurrentReading} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: '#2E7D32', border: 'none', borderRadius: '16px', padding: '20px', color: '#FFF', fontSize: '22px', fontWeight: 'bold' }}><Share2 size={28} /> Export Full Reading</button>
+                <button onClick={saveReading} style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: '2px solid #555', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}><Save size={24} /> Save to Grimoire</button>
               </div>
             </>
           )}
