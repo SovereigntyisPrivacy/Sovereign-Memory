@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Home, Sparkles, Calculator, User, Users, Edit3, Save, History as HistoryIcon, Trash2, Share2, Moon, Star } from 'lucide-react';
+import { Home, Sparkles, Calculator, User, Users, Edit3, Save, History as HistoryIcon, Trash2, Share2, Moon, Star, Mic } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
+import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
 const NUMEROLOGY_DATA = {
   1: { meaning: "The Leader: Fiercely independent, creative, and meant to pioneer new paths.", planet: "Sun", sign: "Leo" },
@@ -18,16 +19,18 @@ const NUMEROLOGY_DATA = {
 };
 
 export default function NumerologyWorkbench({ goHome }) {
-  const [view, setView] = useState('mine'); // 'mine', 'other', 'history'
+  const [view, setView] = useState('mine'); 
   
   const [myBday, setMyBday] = useState('');
   const [isEditingMine, setIsEditingMine] = useState(false);
   
   const [otherName, setOtherName] = useState('');
   const [otherBday, setOtherBday] = useState('');
-  const [otherLifePath, setOtherLifePath] = useState(null);
+  const [otherNumbers, setOtherNumbers] = useState(null);
 
   const [history, setHistory] = useState([]);
+  const [notes, setNotes] = useState('');
+  const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
     const savedBday = localStorage.getItem('sovereign_my_bday');
@@ -42,15 +45,38 @@ export default function NumerologyWorkbench({ goHome }) {
     return () => { listener.remove(); };
   }, [goHome]);
 
-  const calculateLifePath = (dateString) => {
-    if (!dateString) return null;
-    const digits = dateString.replace(/-/g, '').split('').map(Number);
-    let sum = digits.reduce((a, b) => a + b, 0);
+  const switchView = (newView) => {
+    setView(newView);
+    setNotes(''); // Clear notes when switching tabs
+  };
 
+  const reduceNum = (num) => {
+    if (!num) return 0;
+    let sum = num.toString().replace(/\D/g, '').split('').map(Number).reduce((a, b) => a + b, 0);
     while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
       sum = sum.toString().split('').map(Number).reduce((a, b) => a + b, 0);
     }
     return sum;
+  };
+
+  const calculateAll = (dateString) => {
+    if (!dateString) return null;
+    const [y, m, d] = dateString.split('-').map(Number);
+    const today = new Date();
+    const curY = today.getFullYear();
+    const curM = today.getMonth() + 1;
+    const curD = today.getDate();
+
+    const lifePath = reduceNum(dateString);
+    const personalYear = reduceNum(reduceNum(m) + reduceNum(d) + reduceNum(curY));
+    const personalMonth = reduceNum(personalYear + curM);
+    const personalDay = reduceNum(personalMonth + curD);
+    
+    const universalYear = reduceNum(curY);
+    const universalMonth = reduceNum(universalYear + curM);
+    const universalDay = reduceNum(universalMonth + curD);
+
+    return { lifePath, personalMonth, personalDay, universalMonth, universalDay };
   };
 
   const saveMyBday = () => {
@@ -59,52 +85,71 @@ export default function NumerologyWorkbench({ goHome }) {
     setIsEditingMine(false);
   };
 
+  const toggleDictation = async () => {
+    try {
+      const { speechRecognition } = await SpeechRecognition.requestPermissions();
+      if (speechRecognition !== 'granted') return alert("Microphone permission needed.");
+      setIsListening(true);
+      const result = await SpeechRecognition.start({ language: "en-US", prompt: "Speak your interpretation...", partialResults: false, popup: true });
+      if (result && result.matches && result.matches.length > 0) {
+        setNotes(prev => (prev + ' ' + result.matches[0]).trim());
+      }
+    } catch (e) { console.log("Dictation closed"); } finally { setIsListening(false); }
+  };
+
   const saveReadingToHistory = (type) => {
     const isMine = type === 'mine';
-    const lp = isMine ? calculateLifePath(myBday) : otherLifePath;
+    const nums = isMine ? calculateAll(myBday) : otherNumbers;
     const name = isMine ? "My Path" : (otherName || "Unknown Friend");
     const date = isMine ? myBday : otherBday;
 
-    if (!lp) return;
+    if (!nums) return;
 
     const newEntry = {
       id: Date.now(),
       type: type,
       name: name,
       birthdate: date,
-      lifePath: lp,
+      numbers: nums,
+      notes: notes,
       savedAt: new Date().toLocaleDateString()
     };
 
     const updated = [newEntry, ...history];
     setHistory(updated);
     localStorage.setItem('sovereign_num_history', JSON.stringify(updated));
-    alert("Reading saved to History!");
+    setNotes('');
+    alert("Reading secured in History!");
   };
 
   const deleteReading = (id) => {
-    if (window.confirm("Delete this reading?")) {
+    if (window.confirm("Delete this reading permanently?")) {
       const updated = history.filter(h => h.id !== id);
       setHistory(updated);
       localStorage.setItem('sovereign_num_history', JSON.stringify(updated));
     }
   };
 
-  const exportReading = (entry) => {
-    const data = NUMEROLOGY_DATA[entry.lifePath] || { meaning: "A unique path.", planet: "?", sign: "?" };
-    const body = `Numerology Reading: ${entry.name}\nBirthdate: ${entry.birthdate}\n\nLife Path Number: ${entry.lifePath}\nRuling Planet: ${data.planet}\nAstrological Sign: ${data.sign}\n\nMeaning: ${data.meaning}`;
-    window.location.href = `mailto:?subject=Numerology Reading: ${entry.name}&body=${encodeURIComponent(body)}`;
+  const exportReading = (name, date, nums, userNotes) => {
+    const data = NUMEROLOGY_DATA[nums.lifePath] || { meaning: "A unique path.", planet: "?", sign: "?" };
+    let body = `Numerology Blueprint: ${name}\nBirthdate: ${date}\n\n`;
+    body += `Life Path Number: ${nums.lifePath}\nRuling Planet: ${data.planet}\nAstrological Sign: ${data.sign}\n`;
+    body += `Meaning: ${data.meaning}\n\n`;
+    body += `Current Cycles:\n- Personal Month: ${nums.personalMonth}\n- Personal Day: ${nums.personalDay}\n- Universal Month: ${nums.universalMonth}\n- Universal Day: ${nums.universalDay}\n\n`;
+    if (userNotes) body += `My Interpretation:\n${userNotes}`;
+    
+    window.location.href = `mailto:?subject=Numerology Blueprint: ${encodeURIComponent(name)}&body=${encodeURIComponent(body)}`;
   };
 
-  const ReadingCard = ({ lifePath, name }) => {
-    const data = NUMEROLOGY_DATA[lifePath] || { meaning: "A beautiful and unique path awaits you.", planet: "Unknown", sign: "Unknown" };
+  const ReadingCard = ({ nums, name, onSave }) => {
+    const data = NUMEROLOGY_DATA[nums.lifePath] || { meaning: "A beautiful and unique path awaits you.", planet: "Unknown", sign: "Unknown" };
     return (
       <div style={{ backgroundColor: '#1E3A8A', padding: '32px 24px', borderRadius: '24px', border: '2px solid #1c3b5e', textAlign: 'center', marginTop: '24px' }}>
         <div style={{ color: '#93C5FD', fontSize: '20px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
-          {name}'s Life Path
+          {name}'S LIFE PATH
         </div>
-        <div style={{ color: '#FFF', fontSize: '72px', fontWeight: 'bold', margin: '16px 0', textShadow: '0px 4px 12px rgba(0,0,0,0.5)' }}>
-          {lifePath}
+        <div style={{ color: '#FFF', fontSize: '80px', fontWeight: 'bold', margin: '8px 0', textShadow: '0px 4px 12px rgba(0,0,0,0.5)' }}>
+          {nums.lifePath}
         </div>
         
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '24px' }}>
@@ -116,9 +161,49 @@ export default function NumerologyWorkbench({ goHome }) {
           </div>
         </div>
 
-        <p style={{ color: '#E0E0E0', fontSize: '22px', lineHeight: '1.6', margin: 0, fontStyle: 'italic' }}>
+        <p style={{ color: '#E0E0E0', fontSize: '22px', lineHeight: '1.4', margin: '0 0 24px 0', fontStyle: 'italic' }}>
           "{data.meaning}"
         </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+          <div style={{ backgroundColor: '#112244', padding: '16px', borderRadius: '16px' }}>
+            <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Personal Month</div>
+            <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.personalMonth}</div>
+          </div>
+          <div style={{ backgroundColor: '#112244', padding: '16px', borderRadius: '16px' }}>
+            <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Personal Day</div>
+            <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.personalDay}</div>
+          </div>
+          <div style={{ backgroundColor: '#112244', padding: '16px', borderRadius: '16px' }}>
+            <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Universal Month</div>
+            <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.universalMonth}</div>
+          </div>
+          <div style={{ backgroundColor: '#112244', padding: '16px', borderRadius: '16px' }}>
+            <div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Universal Day</div>
+            <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.universalDay}</div>
+          </div>
+        </div>
+
+        <h3 style={{ margin: '0 0 12px 0', fontSize: '20px', color: '#FFF', textAlign: 'left' }}>My Notes:</h3>
+        <textarea 
+          value={notes} 
+          onChange={(e) => setNotes(e.target.value)} 
+          placeholder="Tap to type, or hit Dictate..." 
+          style={{ width: '100%', minHeight: '120px', backgroundColor: '#112244', color: '#FFF', fontSize: '20px', padding: '16px', borderRadius: '16px', border: '2px solid #3B82F6', resize: 'none', marginBottom: '16px', boxSizing: 'border-box' }} 
+        />
+        
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+          <button onClick={toggleDictation} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: isListening ? '#FF9500' : '#222', border: '2px solid #FF9500', borderRadius: '16px', padding: '16px', color: isListening ? '#000' : '#FFF', fontSize: '20px', fontWeight: 'bold' }}>
+            <Mic size={24} color={isListening ? '#000' : '#FF9500'} /> {isListening ? 'Listening...' : 'Dictate'}
+          </button>
+          <button onClick={() => exportReading(name, name === 'MY' ? myBday : otherBday, nums, notes)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#222', border: '2px solid #3B82F6', borderRadius: '16px', padding: '16px', color: '#3B82F6', fontSize: '20px', fontWeight: 'bold' }}>
+            <Share2 size={24} /> Export
+          </button>
+        </div>
+
+        <button onClick={onSave} style={{ width: '100%', backgroundColor: '#2E7D32', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+          <Save size={24} /> Save to History
+        </button>
       </div>
     );
   };
@@ -130,13 +215,13 @@ export default function NumerologyWorkbench({ goHome }) {
       </button>
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-        <button onClick={() => setView('mine')} style={{ flex: 1, backgroundColor: view === 'mine' ? '#FF9500' : '#222', color: view === 'mine' ? '#000' : '#FFF', padding: '12px', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+        <button onClick={() => switchView('mine')} style={{ flex: 1, backgroundColor: view === 'mine' ? '#FF9500' : '#222', color: view === 'mine' ? '#000' : '#FFF', padding: '12px', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
           <User size={24} /> My Path
         </button>
-        <button onClick={() => setView('other')} style={{ flex: 1, backgroundColor: view === 'other' ? '#FF9500' : '#222', color: view === 'other' ? '#000' : '#FFF', padding: '12px', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+        <button onClick={() => switchView('other')} style={{ flex: 1, backgroundColor: view === 'other' ? '#FF9500' : '#222', color: view === 'other' ? '#000' : '#FFF', padding: '12px', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
           <Users size={24} /> Another
         </button>
-        <button onClick={() => setView('history')} style={{ flex: 1, backgroundColor: view === 'history' ? '#FF9500' : '#222', color: view === 'history' ? '#000' : '#FFF', padding: '12px', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+        <button onClick={() => switchView('history')} style={{ flex: 1, backgroundColor: view === 'history' ? '#FF9500' : '#222', color: view === 'history' ? '#000' : '#FFF', padding: '12px', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
           <HistoryIcon size={24} /> History
         </button>
       </div>
@@ -156,13 +241,10 @@ export default function NumerologyWorkbench({ goHome }) {
             </div>
           ) : (
             <div style={{ position: 'relative' }}>
-              <button onClick={() => setIsEditingMine(true)} style={{ position: 'absolute', top: '16px', right: '16px', backgroundColor: '#112244', border: 'none', color: '#FFF', padding: '12px', borderRadius: '12px', zIndex: 10 }}>
+              <button onClick={() => setIsEditingMine(true)} style={{ position: 'absolute', top: '40px', right: '16px', backgroundColor: '#112244', border: 'none', color: '#FFF', padding: '12px', borderRadius: '12px', zIndex: 10 }}>
                 <Edit3 size={24} />
               </button>
-              <ReadingCard lifePath={calculateLifePath(myBday)} name="My" />
-              <button onClick={() => saveReadingToHistory('mine')} style={{ width: '100%', marginTop: '16px', backgroundColor: '#2E7D32', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
-                <Save size={24} /> Save to History
-              </button>
+              <ReadingCard nums={calculateAll(myBday)} name="MY" onSave={() => saveReadingToHistory('mine')} />
             </div>
           )}
         </>
@@ -173,7 +255,7 @@ export default function NumerologyWorkbench({ goHome }) {
           <div style={{ backgroundColor: '#111', padding: '24px', borderRadius: '20px', border: '2px solid #444' }}>
             <h2 style={{ color: '#FFF', margin: '0 0 12px 0', fontSize: '22px' }}>Name:</h2>
             <input 
-              type="text" value={otherName} onChange={(e) => setOtherName(e.target.value)} placeholder="e.g. Sarah"
+              type="text" value={otherName} onChange={(e) => setOtherName(e.target.value)} placeholder="e.g. Will"
               style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '16px', borderRadius: '12px', border: '2px solid #555', outline: 'none', marginBottom: '20px', boxSizing: 'border-box' }}
             />
             <h2 style={{ color: '#FFF', margin: '0 0 12px 0', fontSize: '22px' }}>Birthdate:</h2>
@@ -181,18 +263,13 @@ export default function NumerologyWorkbench({ goHome }) {
               type="date" value={otherBday} onChange={(e) => setOtherBday(e.target.value)}
               style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '16px', borderRadius: '12px', border: '2px solid #FF9500', outline: 'none', marginBottom: '20px', boxSizing: 'border-box' }}
             />
-            <button onClick={() => setOtherLifePath(calculateLifePath(otherBday))} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+            <button onClick={() => setOtherNumbers(calculateAll(otherBday))} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
               <Calculator size={28} /> Calculate
             </button>
           </div>
 
-          {otherLifePath && (
-            <div>
-              <ReadingCard lifePath={otherLifePath} name={otherName || "Friend"} />
-              <button onClick={() => saveReadingToHistory('other')} style={{ width: '100%', marginTop: '16px', backgroundColor: '#2E7D32', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
-                <Save size={24} /> Save to History
-              </button>
-            </div>
+          {otherNumbers && (
+            <ReadingCard nums={otherNumbers} name={(otherName || "FRIEND").toUpperCase()} onSave={() => saveReadingToHistory('other')} />
           )}
         </>
       )}
@@ -201,26 +278,27 @@ export default function NumerologyWorkbench({ goHome }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {history.length === 0 ? <p style={{ color: '#888', textAlign: 'center', fontSize: '20px' }}>No saved readings.</p> : 
             history.map(entry => {
-              const data = NUMEROLOGY_DATA[entry.lifePath] || { planet: '?', sign: '?' };
+              const data = NUMEROLOGY_DATA[entry.numbers.lifePath] || { planet: '?', sign: '?' };
               return (
                 <div key={entry.id} style={{ backgroundColor: '#222', border: '2px solid #444', borderRadius: '16px', padding: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                     <div>
                       <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold' }}>{entry.name}</div>
-                      <div style={{ color: '#888', fontSize: '18px' }}>Bday: {entry.birthdate}</div>
+                      <div style={{ color: '#888', fontSize: '18px' }}>{entry.savedAt}</div>
                     </div>
                     <div style={{ backgroundColor: '#FF9500', color: '#000', fontSize: '28px', fontWeight: 'bold', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                      {entry.lifePath}
+                      {entry.numbers.lifePath}
                     </div>
                   </div>
                   
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ fontSize: '16px', color: '#93C5FD' }}><strong>Planet:</strong> {data.planet}</div>
-                    <div style={{ fontSize: '16px', color: '#FFD700' }}><strong>Sign:</strong> {data.sign}</div>
-                  </div>
+                  {entry.notes && (
+                    <div style={{ backgroundColor: '#111', padding: '12px', borderRadius: '12px', marginBottom: '16px', borderLeft: '4px solid #3B82F6' }}>
+                      <div style={{ fontSize: '16px', color: '#CCC', fontStyle: 'italic' }}>"{entry.notes}"</div>
+                    </div>
+                  )}
 
                   <div style={{ display: 'flex', gap: '12px' }}>
-                    <button onClick={() => exportReading(entry)} style={{ flex: 1, backgroundColor: '#112244', border: '2px solid #3B82F6', color: '#3B82F6', padding: '12px', borderRadius: '12px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+                    <button onClick={() => exportReading(entry.name, entry.birthdate, entry.numbers, entry.notes)} style={{ flex: 1, backgroundColor: '#112244', border: '2px solid #3B82F6', color: '#3B82F6', padding: '12px', borderRadius: '12px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
                       <Share2 size={20} /> Export
                     </button>
                     <button onClick={() => deleteReading(entry.id)} style={{ backgroundColor: 'transparent', border: '2px solid #FF3B30', color: '#FF3B30', padding: '12px 20px', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
