@@ -1,47 +1,49 @@
 name: Build Android APK
-
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-      - name: Build Web App
-        run: npm run build
+      - name: Install Dependencies & Build Web
+        run: |
+          npm install
+          npm run build
 
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Setup Java for Android
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Grant Execute Permission to Gradle
-        run: chmod +x android/gradlew
-
-      - name: Build APK
+      - name: Build Release APK
         working-directory: ./android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
 
-      - name: Upload APK as Artifact
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEYSTORE_PASSWORD }}
+
+      - name: Upload Signed Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SovereignMemory-App
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: SovereignMemory-Updateable-APK
+          path: ${{steps.sign_app.outputs.signedReleaseFile}}
