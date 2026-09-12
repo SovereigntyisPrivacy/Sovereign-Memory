@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home, Mic, Trash2, CheckSquare, RotateCcw, List, Plus, Clock, User, ChevronUp, ChevronDown, Activity, History as HistoryIcon } from 'lucide-react';
+import { ArrowLeft,  Home, Mic, Trash2, CheckSquare, RotateCcw, List, Plus, Clock, User, ChevronUp, ChevronDown, Activity, History as HistoryIcon } from 'lucide-react';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { App as CapApp } from '@capacitor/app';
