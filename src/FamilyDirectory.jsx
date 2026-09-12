@@ -1,5 +1,5 @@
 import { App as CapApp } from '@capacitor/app';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from "react";
 import { Home,  ArrowLeft, Phone, User, MapPin, Calendar, Mail, Edit3, Save, Camera, Plus, Trash2, HeartPulse, FileText } from 'lucide-react';
 
 export default function FamilyDirectory({ goHome }) {
