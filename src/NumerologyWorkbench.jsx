@@ -1,3 +1,4 @@
+import { Home,  App as CapApp } from '@capacitor/app';
 import { useState, useEffect, useRef } from 'react';
 import { Calculator, ArrowRight, Delete, Volume2, RefreshCcw, Share2, User, Users, Sparkles, Mic } from 'lucide-react';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
@@ -137,8 +138,17 @@ export default function NumerologyWorkbench() {
   const renderChart = (chart, notes, setNotes) => {
     const quote = GODDESS_QUOTES[chart.personalDay % GODDESS_QUOTES.length];
 
-    return (
+    
+  useEffect(() => {
+    const listener = CapApp.addListener('backButton', () => {
+      if (typeof goHome === 'function') goHome();
+    });
+    return () => { listener.remove(); };
+  }, [goHome]);
+return (
       <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <button onClick={goHome} style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FF9500', padding: '16px 24px', borderRadius: '16px', color: '#000', fontSize: '22px', fontWeight: 'bold', border: 'none', marginBottom: '24px' }}><Home size={24} /> GO HOME</button>
+
         
         <div style={{ backgroundColor: 'rgba(255, 215, 0, 0.05)', borderLeft: '6px solid #FFD700', padding: '24px', borderRadius: '0 16px 16px 0', marginBottom: '32px' }}>
           <Sparkles size={28} color="#FFD700" style={{ marginBottom: '12px' }} />

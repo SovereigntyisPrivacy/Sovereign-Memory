@@ -1,3 +1,4 @@
+import { Home,  App as CapApp } from '@capacitor/app';
 import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Phone, User, MapPin, Calendar, Mail, Edit3, Save, Camera, Plus, Trash2, HeartPulse, FileText } from 'lucide-react';
 
@@ -40,7 +41,14 @@ export default function FamilyDirectory({ goHome }) {
 
   const renderProfile = () => {
     if (isEditingProfile) {
-      return (
+      
+  useEffect(() => {
+    const listener = CapApp.addListener('backButton', () => {
+      if (typeof goHome === 'function') goHome();
+    });
+    return () => { listener.remove(); };
+  }, [goHome]);
+return (
         <div style={{ backgroundColor: 'var(--surface)', padding: '24px', borderRadius: '24px', border: '2px solid var(--accent)', marginBottom: '32px' }}>
           <h2 style={{ color: 'var(--accent)', marginBottom: '20px', textAlign: 'center' }}>Edit My Details</h2>
           

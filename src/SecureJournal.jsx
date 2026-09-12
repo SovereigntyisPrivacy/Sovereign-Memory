@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { Home,  useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Trash2, Mic, Lock, ShieldCheck, Save, Share2, Book, Clock, List, Key } from 'lucide-react';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { App as CapApp } from '@capacitor/app';

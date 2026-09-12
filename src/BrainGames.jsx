@@ -1,8 +1,17 @@
+import { App as CapApp } from '@capacitor/app';
 import { useState, useEffect } from 'react';
 import { Home, Copy, Music, Grid as GridIcon, Leaf, Volume2, Play, Settings, Type, Hash, ArrowLeft } from 'lucide-react';
 
 export default function BrainGames({ goHome }) {
   const [activeGame, setActiveGame] = useState('menu');
+  useEffect(() => {
+    const listener = CapApp.addListener('backButton', () => {
+      if (activeGame === 'menu' && typeof goHome === 'function') goHome();
+      else setActiveGame('menu');
+    });
+    return () => { listener.remove(); };
+  }, [activeGame, goHome]);
+
 
   if (activeGame === 'matching') return <MatchingGame goBack={() => setActiveGame('menu')} />;
   if (activeGame === 'sequence') return <SequenceEcho goBack={() => setActiveGame('menu')} />;

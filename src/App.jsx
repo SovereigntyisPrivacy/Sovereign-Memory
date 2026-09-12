@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { App as CapApp } from '@capacitor/app';
 import { useState } from 'react';
 import { CheckSquare, Hash, Brain, Clock, Lock, Phone, Layers } from 'lucide-react';
 import DailyTasks from './DailyTasks';
@@ -10,6 +12,13 @@ import BrainGames from './BrainGames';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
+  useEffect(() => {
+    const listener = CapApp.addListener('backButton', () => {
+      if (activeTab === 'home') CapApp.exitApp();
+    });
+    return () => { listener.remove(); };
+  }, [activeTab]);
+
 
   return (
     <div style={{ backgroundColor: 'var(--background)', color: 'var(--text)', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '16px', boxSizing: 'border-box' }}>
