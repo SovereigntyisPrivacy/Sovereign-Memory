@@ -112,6 +112,16 @@ export default function TarotReader({ goHome }) {
     if (savedHistory) setHistory(JSON.parse(savedHistory));
   }, []);
 
+  const getDerivedElement = (name) => {
+    if (!name) return '?';
+    const n = name.toLowerCase();
+    if (n.includes('wands')) return 'Fire';
+    if (n.includes('cups')) return 'Water';
+    if (n.includes('swords')) return 'Air';
+    if (n.includes('pentacles') || n.includes('coins')) return 'Earth';
+    return '?'; 
+  };
+
   const drawDailyCard = () => {
     const randomBuffer = new Uint32Array(1);
     window.crypto.getRandomValues(randomBuffer);
@@ -176,8 +186,25 @@ export default function TarotReader({ goHome }) {
     let body = `${entry.type === 'daily' ? 'Daily Tarot Draw' : 'Physical Tarot Reading'}\nDate: ${entry.dateStr}\nReading For: ${entry.subject}\n`;
     if (entry.question) body += `Question/Focus: ${entry.question}\n`;
     body += `\nCards Pulled:\n`;
-    entry.cards.forEach(c => { body += `- ${c.name}\n  Meaning: ${c.meaning}\n  Numerology: ${c.num || '?'} | Sign: ${c.sign || '?'}\n\n`; });
+    entry.cards.forEach(c => { 
+      body += `- ${c.name}\n  Meaning: ${c.meaning}\n  Numerology: ${c.num || '?'} | Astrology: ${c.sign || '?'} | Element: ${c.element || getDerivedElement(c.name)}\n\n`; 
+    });
     body += `My Interpretation:\n${entry.notes || "No notes added."}`;
+    window.location.href = `mailto:?subject=Tarot Reading Log&body=${encodeURIComponent(body)}`;
+  };
+
+  const exportCurrentReading = () => {
+    if (view === 'daily' && !drawnCard) return;
+    if (view === 'physical' && selectedCards.length === 0) return alert("Select cards first!");
+    
+    const cardsToExport = view === 'daily' ? [drawnCard] : selectedCards;
+    let body = `${view === 'daily' ? 'Daily Tarot Draw' : 'Physical Tarot Reading'}\nDate: ${view === 'physical' ? readingDate : new Date().toLocaleDateString()}\nReading For: ${readingSubject || 'Myself'}\n`;
+    if (readingQuestion) body += `Question/Focus: ${readingQuestion}\n`;
+    body += `\nCards Pulled:\n`;
+    cardsToExport.forEach(c => { 
+      body += `- ${c.name}\n  Meaning: ${c.meaning}\n  Numerology: ${c.num || '?'} | Astrology: ${c.sign || '?'} | Element: ${c.element || getDerivedElement(c.name)}\n\n`; 
+    });
+    body += `My Interpretation:\n${notes || "No notes added."}`;
     window.location.href = `mailto:?subject=Tarot Reading Log&body=${encodeURIComponent(body)}`;
   };
 
@@ -187,15 +214,19 @@ export default function TarotReader({ goHome }) {
     (entry.question && entry.question.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const MetadataTags = ({ num, sign }) => (
-    <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+  const MetadataTags = ({ card }) => (
+    <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
       <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>NUM</span>
-        <span style={{ color: '#FFD700', fontSize: '16px', fontWeight: 'bold' }}>{num || '?'}</span>
+        <span style={{ color: '#FFD700', fontSize: '16px', fontWeight: 'bold' }}>{card.num || '?'}</span>
       </div>
       <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>SIGN</span>
-        <span style={{ color: '#93C5FD', fontSize: '16px', fontWeight: 'bold' }}>{sign || '?'}</span>
+        <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>ASTROLOGY</span>
+        <span style={{ color: '#93C5FD', fontSize: '16px', fontWeight: 'bold' }}>{card.sign || '?'}</span>
+      </div>
+      <div style={{ backgroundColor: '#111', padding: '8px 12px', borderRadius: '8px', border: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ color: '#888', fontSize: '14px', fontWeight: 'bold' }}>ELEMENT</span>
+        <span style={{ color: '#4ADE80', fontSize: '16px', fontWeight: 'bold' }}>{card.element || getDerivedElement(card.name)}</span>
       </div>
     </div>
   );
@@ -247,7 +278,7 @@ export default function TarotReader({ goHome }) {
                         <div key={c.id} style={{ backgroundColor: '#222', padding: '16px', borderRadius: '12px', borderLeft: '4px solid #FF9500' }}>
                           <div style={{ color: '#FF9500', fontSize: '22px', fontWeight: 'bold', marginBottom: '8px' }}>{c.name}</div>
                           <div style={{ color: '#E0E0E0', fontSize: '18px', lineHeight: '1.4' }}>{c.meaning}</div>
-                          <MetadataTags num={c.num} sign={c.sign} />
+                          <MetadataTags card={c} />
                         </div>
                       ))}
                     </div>
@@ -357,9 +388,10 @@ export default function TarotReader({ goHome }) {
                 <div style={{ backgroundColor: 'var(--surface)', border: '2px solid #FF9500', borderRadius: '24px', padding: '32px', textAlign: 'center', marginBottom: '24px' }}>
                   <h3 style={{ color: '#FF9500', fontSize: '32px', marginBottom: '16px', marginTop: 0 }}>{drawnCard.name}</h3>
                   <p style={{ color: '#FFF', fontSize: '22px', lineHeight: '1.5', margin: '0 0 20px 0' }}>{drawnCard.meaning}</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-around', backgroundColor: '#111', padding: '16px', borderRadius: '16px' }}>
-                    <div><div style={{ color: '#888', fontSize: '16px', textTransform: 'uppercase' }}>Num</div><div style={{ color: '#FFD700', fontSize: '24px', fontWeight: 'bold' }}>{drawnCard.num || '?'}</div></div>
-                    <div><div style={{ color: '#888', fontSize: '16px', textTransform: 'uppercase' }}>Sign</div><div style={{ color: '#93C5FD', fontSize: '24px', fontWeight: 'bold' }}>{drawnCard.sign || '?'}</div></div>
+                  <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '16px', backgroundColor: '#111', padding: '16px', borderRadius: '16px' }}>
+                    <div><div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Num</div><div style={{ color: '#FFD700', fontSize: '24px', fontWeight: 'bold' }}>{drawnCard.num || '?'}</div></div>
+                    <div><div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Astrology</div><div style={{ color: '#93C5FD', fontSize: '24px', fontWeight: 'bold' }}>{drawnCard.sign || '?'}</div></div>
+                    <div><div style={{ color: '#888', fontSize: '14px', textTransform: 'uppercase' }}>Element</div><div style={{ color: '#4ADE80', fontSize: '24px', fontWeight: 'bold' }}>{drawnCard.element || getDerivedElement(drawnCard.name)}</div></div>
                   </div>
                 </div>
               )}
@@ -371,7 +403,7 @@ export default function TarotReader({ goHome }) {
                     <div key={c.id} style={{ backgroundColor: 'var(--surface)', padding: '20px', borderRadius: '16px', borderLeft: '6px solid #FF9500' }}>
                       <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#FF9500', marginBottom: '8px' }}>{c.name}</div>
                       <div style={{ fontSize: '18px', color: '#E0E0E0', marginBottom: '12px' }}>{c.meaning}</div>
-                      <MetadataTags num={c.num} sign={c.sign} />
+                      <MetadataTags card={c} />
                     </div>
                   ))}
                 </div>
@@ -387,13 +419,18 @@ export default function TarotReader({ goHome }) {
 
               <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', color: '#FFF' }}>My Interpretation:</h3>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Tap to type, or hit Dictate..." style={{ width: '100%', minHeight: '160px', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '20px', borderRadius: '20px', border: '2px solid #555', resize: 'none', marginBottom: '20px', boxSizing: 'border-box' }} />
-              <button onClick={toggleDictation} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: isListening ? '#FF9500' : '#333', border: '2px solid #FF9500', borderRadius: '16px', padding: '20px', color: isListening ? '#000' : '#FFF', fontSize: '22px', fontWeight: 'bold', marginBottom: '12px' }}>
+              <button onClick={toggleDictation} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: isListening ? '#FF9500' : '#333', border: '2px solid #FF9500', borderRadius: '16px', padding: '20px', color: isListening ? '#000' : '#FFF', fontSize: '22px', fontWeight: 'bold', marginBottom: '24px' }}>
                 <Mic size={28} color={isListening ? '#000' : '#FF9500'} /> {isListening ? 'Listening...' : 'Dictate'}
               </button>
               
-              <button onClick={saveReading} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#2E7D32', border: 'none', borderRadius: '16px', padding: '20px', color: '#FFF', fontSize: '22px', fontWeight: 'bold' }}>
-                <Save size={28} /> Save to Grimoire
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <button onClick={exportCurrentReading} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: '#2E7D32', border: 'none', borderRadius: '16px', padding: '20px', color: '#FFF', fontSize: '22px', fontWeight: 'bold' }}>
+                  <Share2 size={28} /> Export Full Reading
+                </button>
+                <button onClick={saveReading} style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '22px', fontWeight: 'bold', border: '2px solid #555', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+                  <Save size={24} /> Save to Grimoire
+                </button>
+              </div>
             </>
           )}
         </>
