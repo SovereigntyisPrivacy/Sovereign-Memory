@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import TarotReader from './TarotReader';
 import { Home, CheckSquare, Phone, Clock, Brain, Hash, Lock } from 'lucide-react';
 import BrainGamesHub from './BrainGamesHub';
 import DailyTasks from "./DailyTasks";
