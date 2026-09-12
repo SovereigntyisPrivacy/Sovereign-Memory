@@ -103,27 +103,17 @@ export default function NumerologyWorkbench() {
   };
 
   const toggleDictation = async (setNotesFunc) => {
-    if (isListening) {
-      await SpeechRecognition.stop();
-      setIsListening(false);
-      return;
-    }
     try {
       const { speechRecognition } = await SpeechRecognition.requestPermissions();
       if (speechRecognition !== 'granted') return;
       setIsListening(true);
-      originalTextRef.current = document.querySelector('textarea')?.value || '';
-      
-      SpeechRecognition.removeAllListeners();
-      SpeechRecognition.addListener("partialResults", (data) => {
-        if (data.matches && data.matches.length > 0) {
-           setNotesFunc((originalTextRef.current + ' ' + data.matches[0]).trim());
-        }
+      const result = await SpeechRecognition.start({
+        language: "en-US", prompt: "Speak your thoughts...", partialResults: false, popup: true
       });
-      await SpeechRecognition.start({ language: "en-US", partialResults: true, popup: false });
-    } catch (e) {
-      setIsListening(false);
-    }
+      if (result && result.matches && result.matches.length > 0) {
+        setNotesFunc(prev => (prev + ' ' + result.matches[0]).trim());
+      }
+    } catch (e) { console.log("Dictation closed"); } finally { setIsListening(false); }
   };
 
   const generateReportText = (chart, notes, quote) => {

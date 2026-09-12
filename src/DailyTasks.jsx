@@ -102,30 +102,19 @@ export default function DailyTasks() {
   };
 
   const toggleDictation = async (target) => {
-    if (isListening) {
-      await SpeechRecognition.stop();
-      setIsListening(false);
-      return;
-    }
     try {
       const { speechRecognition } = await SpeechRecognition.requestPermissions();
       if (speechRecognition !== 'granted') return;
       setIsListening(true);
-      activeTargetRef.current = target;
-      originalTextRef.current = target === 'title' ? newListTitle : newTaskText;
-      
-      SpeechRecognition.removeAllListeners();
-      SpeechRecognition.addListener("partialResults", (data) => {
-        if (data.matches && data.matches.length > 0) {
-          const newText = (originalTextRef.current + ' ' + data.matches[0]).trim();
-          if (activeTargetRef.current === 'title') setNewListTitle(newText);
-          if (activeTargetRef.current === 'task') setNewTaskText(newText);
-        }
+      const result = await SpeechRecognition.start({
+        language: "en-US", prompt: "Speak your task...", partialResults: false, popup: true
       });
-      await SpeechRecognition.start({ language: "en-US", partialResults: true, popup: false });
-    } catch (e) {
-      setIsListening(false);
-    }
+      if (result && result.matches && result.matches.length > 0) {
+        const spoken = result.matches[0];
+        if (target === 'title') setNewListTitle(prev => (prev + ' ' + spoken).trim());
+        if (target === 'task') setNewTaskText(prev => (prev + ' ' + spoken).trim());
+      }
+    } catch (e) { console.log("Dictation closed"); } finally { setIsListening(false); }
   };
 
   const activeLists = lists.filter(l => l.status === 'active');

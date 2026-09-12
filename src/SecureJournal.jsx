@@ -102,17 +102,17 @@ export default function SecureJournal({ goHome }) {
   };
 
   const toggleDictation = async () => {
-    if (isListening) { await SpeechRecognition.stop(); setIsListening(false); return; }
     try {
       const { speechRecognition } = await SpeechRecognition.requestPermissions();
       if (speechRecognition !== 'granted') return alert("Microphone permission needed.");
-      originalTextRef.current = entryText; setIsListening(true);
-      SpeechRecognition.removeAllListeners();
-      SpeechRecognition.addListener("partialResults", (data) => {
-        if (data.matches && data.matches.length > 0) setEntryText((originalTextRef.current + ' ' + data.matches[0]).trim());
+      setIsListening(true);
+      const result = await SpeechRecognition.start({
+        language: "en-US", prompt: "Speak your entry...", partialResults: false, popup: true
       });
-      await SpeechRecognition.start({ language: "en-US", partialResults: true, popup: false });
-    } catch (e) { setIsListening(false); }
+      if (result && result.matches && result.matches.length > 0) {
+        setEntryText(prev => (prev + ' ' + result.matches[0]).trim());
+      }
+    } catch (e) { console.log("Dictation closed"); } finally { setIsListening(false); }
   };
 
   // --- VIEW 1: SECURE LOCK SCREEN ---
