@@ -22,9 +22,11 @@ export default function NumerologyWorkbench({ goHome }) {
   const [view, setView] = useState('mine'); 
   
   const [myBday, setMyBday] = useState('');
+  const [myFullName, setMyFullName] = useState('');
   const [isEditingMine, setIsEditingMine] = useState(false);
   
   const [otherName, setOtherName] = useState('');
+  const [otherFullName, setOtherFullName] = useState('');
   const [otherBday, setOtherBday] = useState('');
   const [otherNumbers, setOtherNumbers] = useState(null);
 
@@ -34,7 +36,9 @@ export default function NumerologyWorkbench({ goHome }) {
 
   useEffect(() => {
     const savedBday = localStorage.getItem('sovereign_my_bday');
+    const savedName = localStorage.getItem('sovereign_my_fullname');
     if (savedBday) setMyBday(savedBday);
+    if (savedName) setMyFullName(savedName);
 
     const savedHistory = localStorage.getItem('sovereign_num_history');
     if (savedHistory) setHistory(JSON.parse(savedHistory));
@@ -59,7 +63,22 @@ export default function NumerologyWorkbench({ goHome }) {
     return sum;
   };
 
-  const calculateAll = (dateString) => {
+  const getLetterValue = (char) => {
+    const map = {
+      a:1, j:1, s:1,
+      b:2, k:2, t:2,
+      c:3, l:3, u:3,
+      d:4, m:4, v:4,
+      e:5, n:5, w:5,
+      f:6, o:6, x:6,
+      g:7, p:7, y:7,
+      h:8, q:8, z:8,
+      i:9, r:9
+    };
+    return map[char] || 0;
+  };
+
+  const calculateAll = (dateString, fullNameString = '') => {
     if (!dateString) return null;
     const [y, m, d] = dateString.split('-').map(Number);
     const today = new Date();
@@ -67,7 +86,7 @@ export default function NumerologyWorkbench({ goHome }) {
     const curM = today.getMonth() + 1;
     const curD = today.getDate();
 
-    // Core Numbers
+    // Core Date Numbers
     const lifePath = reduceNum(dateString);
     const birthDayNum = reduceNum(d);
     const attitudeNum = reduceNum(reduceNum(m) + reduceNum(d));
@@ -81,16 +100,44 @@ export default function NumerologyWorkbench({ goHome }) {
     const universalMonth = reduceNum(universalYear + curM);
     const universalDay = reduceNum(universalMonth + curD);
 
+    // Pythagorean Name Numbers
+    let destinyNum = null;
+    let soulUrgeNum = null;
+    let personalityNum = null;
+
+    if (fullNameString.trim()) {
+      const cleanName = fullNameString.toLowerCase().replace(/[^a-z]/g, '');
+      let vowelSum = 0;
+      let consonantSum = 0;
+      let totalSum = 0;
+
+      for (let char of cleanName) {
+        const val = getLetterValue(char);
+        totalSum += val;
+        if (['a', 'e', 'i', 'o', 'u'].includes(char)) {
+          vowelSum += val;
+        } else {
+          consonantSum += val;
+        }
+      }
+
+      destinyNum = reduceNum(totalSum);
+      soulUrgeNum = reduceNum(vowelSum);
+      personalityNum = reduceNum(consonantSum);
+    }
+
     return { 
       lifePath, birthDayNum, attitudeNum, 
       personalYear, personalMonth, personalDay, 
-      universalYear, universalMonth, universalDay 
+      universalYear, universalMonth, universalDay,
+      destinyNum, soulUrgeNum, personalityNum
     };
   };
 
-  const saveMyBday = () => {
+  const saveMyInfo = () => {
     if (!myBday) return;
     localStorage.setItem('sovereign_my_bday', myBday);
+    localStorage.setItem('sovereign_my_fullname', myFullName);
     setIsEditingMine(false);
   };
 
@@ -108,7 +155,7 @@ export default function NumerologyWorkbench({ goHome }) {
 
   const saveReadingToHistory = (type) => {
     const isMine = type === 'mine';
-    const nums = isMine ? calculateAll(myBday) : otherNumbers;
+    const nums = isMine ? calculateAll(myBday, myFullName) : otherNumbers;
     const name = isMine ? "My Path" : (otherName || "Unknown Friend");
     const date = isMine ? myBday : otherBday;
 
@@ -142,9 +189,18 @@ export default function NumerologyWorkbench({ goHome }) {
   const exportReading = (name, date, nums, userNotes) => {
     const data = NUMEROLOGY_DATA[nums.lifePath] || { meaning: "A unique path.", planet: "?", sign: "?" };
     let body = `Numerology Blueprint: ${name}\nBirthdate: ${date}\n\n`;
+    
     body += `--- CORE PROFILE ---\n`;
     body += `Life Path: ${nums.lifePath} (${data.planet} / ${data.sign})\nMeaning: ${data.meaning}\n`;
     body += `Birth Day Number: ${nums.birthDayNum}\nAttitude Number: ${nums.attitudeNum}\n\n`;
+    
+    if (nums.destinyNum) {
+      body += `--- NAME NUMBERS (Pythagorean) ---\n`;
+      body += `Destiny (Expression): ${nums.destinyNum}\n`;
+      body += `Soul Urge (Heart's Desire): ${nums.soulUrgeNum}\n`;
+      body += `Personality: ${nums.personalityNum}\n\n`;
+    }
+
     body += `--- CURRENT CYCLES ---\n`;
     body += `Personal: Year ${nums.personalYear} | Month ${nums.personalMonth} | Day ${nums.personalDay}\n`;
     body += `Universal: Year ${nums.universalYear} | Month ${nums.universalMonth} | Day ${nums.universalDay}\n\n`;
@@ -178,7 +234,7 @@ export default function NumerologyWorkbench({ goHome }) {
           "{data.meaning}"
         </p>
 
-        {/* CORE NUMBERS */}
+        {/* CORE DATE NUMBERS */}
         <div style={{ backgroundColor: '#112244', padding: '20px', borderRadius: '20px', marginBottom: '24px' }}>
           <div style={{ color: '#93C5FD', fontSize: '16px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', fontWeight: 'bold' }}>Additional Core Numbers</div>
           <div style={{ display: 'flex', gap: '12px' }}>
@@ -192,6 +248,27 @@ export default function NumerologyWorkbench({ goHome }) {
             </div>
           </div>
         </div>
+
+        {/* NAME NUMBERS (Only shows if Name was provided) */}
+        {nums.destinyNum > 0 && (
+          <div style={{ backgroundColor: '#112244', padding: '20px', borderRadius: '20px', marginBottom: '24px' }}>
+            <div style={{ color: '#93C5FD', fontSize: '16px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', fontWeight: 'bold' }}>Pythagorean Name Numbers</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
+                <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Destiny</div>
+                <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.destinyNum}</div>
+              </div>
+              <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
+                <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Soul Urge</div>
+                <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.soulUrgeNum}</div>
+              </div>
+              <div style={{ backgroundColor: '#1a365d', padding: '12px', borderRadius: '12px' }}>
+                <div style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase' }}>Personality</div>
+                <div style={{ color: '#FFF', fontSize: '28px', fontWeight: 'bold' }}>{nums.personalityNum}</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* CURRENT CYCLES */}
         <div style={{ backgroundColor: '#112244', padding: '20px', borderRadius: '20px', marginBottom: '24px' }}>
@@ -277,8 +354,13 @@ export default function NumerologyWorkbench({ goHome }) {
                 type="date" value={myBday} onChange={(e) => setMyBday(e.target.value)}
                 style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '28px', padding: '20px', borderRadius: '16px', border: '2px solid #FF9500', outline: 'none', marginBottom: '20px', boxSizing: 'border-box' }}
               />
-              <button onClick={saveMyBday} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px' }}>
-                Lock in My Path
+              <h2 style={{ color: '#FFF', margin: '0 0 16px 0', fontSize: '24px' }}>Full Birth Name (Optional):</h2>
+              <input 
+                type="text" value={myFullName} onChange={(e) => setMyFullName(e.target.value)} placeholder="For Destiny numbers..."
+                style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '20px', borderRadius: '16px', border: '2px solid #555', outline: 'none', marginBottom: '24px', boxSizing: 'border-box' }}
+              />
+              <button onClick={saveMyInfo} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px' }}>
+                Lock in My Blueprint
               </button>
             </div>
           ) : (
@@ -286,7 +368,7 @@ export default function NumerologyWorkbench({ goHome }) {
               <button onClick={() => setIsEditingMine(true)} style={{ position: 'absolute', top: '40px', right: '16px', backgroundColor: '#112244', border: 'none', color: '#FFF', padding: '12px', borderRadius: '12px', zIndex: 10 }}>
                 <Edit3 size={24} />
               </button>
-              <ReadingCard nums={calculateAll(myBday)} name="MY" onSave={() => saveReadingToHistory('mine')} />
+              <ReadingCard nums={calculateAll(myBday, myFullName)} name="MY" onSave={() => saveReadingToHistory('mine')} />
             </div>
           )}
         </>
@@ -295,7 +377,7 @@ export default function NumerologyWorkbench({ goHome }) {
       {view === 'other' && (
         <>
           <div style={{ backgroundColor: '#111', padding: '24px', borderRadius: '20px', border: '2px solid #444' }}>
-            <h2 style={{ color: '#FFF', margin: '0 0 12px 0', fontSize: '22px' }}>Name:</h2>
+            <h2 style={{ color: '#FFF', margin: '0 0 12px 0', fontSize: '22px' }}>Display Name:</h2>
             <input 
               type="text" value={otherName} onChange={(e) => setOtherName(e.target.value)} placeholder="e.g. Will"
               style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '16px', borderRadius: '12px', border: '2px solid #555', outline: 'none', marginBottom: '20px', boxSizing: 'border-box' }}
@@ -305,8 +387,13 @@ export default function NumerologyWorkbench({ goHome }) {
               type="date" value={otherBday} onChange={(e) => setOtherBday(e.target.value)}
               style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '16px', borderRadius: '12px', border: '2px solid #FF9500', outline: 'none', marginBottom: '20px', boxSizing: 'border-box' }}
             />
-            <button onClick={() => setOtherNumbers(calculateAll(otherBday))} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
-              <Calculator size={28} /> Calculate
+            <h2 style={{ color: '#FFF', margin: '0 0 12px 0', fontSize: '22px' }}>Full Birth Name (Optional):</h2>
+            <input 
+              type="text" value={otherFullName} onChange={(e) => setOtherFullName(e.target.value)} placeholder="For Destiny numbers..."
+              style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '16px', borderRadius: '12px', border: '2px solid #555', outline: 'none', marginBottom: '24px', boxSizing: 'border-box' }}
+            />
+            <button onClick={() => setOtherNumbers(calculateAll(otherBday, otherFullName))} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+              <Calculator size={28} /> Calculate Blueprint
             </button>
           </div>
 
