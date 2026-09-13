@@ -141,17 +141,7 @@ export default function SecureJournal({ goHome }) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '24px', paddingTop: '12px' }}>
 
-    <style>{`
-      button:has(.lucide-mic), button:has(.lucide-save), button:has(.lucide-trash-2), button:has(.lucide-home) {
-        min-height: 90px !important;
-        border-radius: 24px !important;
-        font-size: 28px !important;
-      }
-      svg.lucide { 
-        width: 40px !important; 
-        height: 40px !important; 
-      }
-    `}</style>
+    
   
         <button onClick={goHome} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '12px 20px', borderRadius: '16px', color: '#FFF', fontSize: '20px', fontWeight: 'bold', border: 'none', alignSelf: 'flex-start', marginBottom: '24px' }}>
           <ArrowLeft size={24} /> Back

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import {  ArrowLeft, Sparkles, Mic, Share2, Layers, BookOpen, Calendar as CalIcon, Save, List, Clock, Search, Trash2, ChevronDown, ChevronUp, User  } from 'lucide-react';
+import {   ArrowLeft, Sparkles, Mic, Share2, Layers, BookOpen, Calendar as CalIcon, Save, List, Clock, Search, Trash2, ChevronDown, ChevronUp, User   } from 'lucide-react';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { App as CapApp } from '@capacitor/app';
 
@@ -113,7 +113,7 @@ export default function TarotReader({ goHome }) {
 
   const getDerivedElement = (name) => {
     if (!name) return '?';
-    const n = name.toLowerCase();
+    const n = (name || '').toLowerCase();
     if (n.includes('wands')) return 'Fire';
     if (n.includes('cups')) return 'Water';
     if (n.includes('swords')) return 'Air';
@@ -131,7 +131,7 @@ export default function TarotReader({ goHome }) {
 
   const getTrueAstrology = (card) => {
     if (card.sign && !['Fire', 'Water', 'Earth', 'Air'].includes(card.sign)) return card.sign;
-    const n = card.name.toLowerCase();
+    const n = (card.name || '').toLowerCase();
     if (n.includes('ace ') || n.includes('page ') || n.includes('knight ') || n.includes('queen ') || n.includes('king ')) return null;
     let num = '';
     if (n.includes('two') || n.includes(' 2')) num = '2';
@@ -349,7 +349,7 @@ export default function TarotReader({ goHome }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '32px' }}>
                 {TAROT_DECK.map(card => {
                   const isSelected = selectedCards.some(c => c.id === card.id);
-                  return <button key={card.id} onClick={() => togglePhysicalCard(card)} style={{ backgroundColor: isSelected ? '#FF9500' : '#111', color: isSelected ? '#000' : '#FFF', border: isSelected ? '2px solid #FF9500' : '2px solid #444', borderRadius: '12px', padding: '16px 8px', fontSize: '18px', fontWeight: 'bold', minHeight: '80px' }}>{card.name.split(' - ')[1] || card.name}</button>;
+                  return <button key={card.id} onClick={() => togglePhysicalCard(card)} style={{ backgroundColor: isSelected ? '#FF9500' : '#111', color: isSelected ? '#000' : '#FFF', border: isSelected ? '2px solid #FF9500' : '2px solid #444', borderRadius: '12px', padding: '16px 8px', fontSize: '18px', fontWeight: 'bold', minHeight: '80px' }}>{(card.name ? (card.name.includes(' - ') ? card.name.split(' - ')[1] : card.name) : 'Unknown')}</button>;
                 })}
               </div>
             </>
