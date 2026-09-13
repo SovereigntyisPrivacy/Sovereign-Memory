@@ -241,27 +241,27 @@ export default function NumerologyWorkbench({ goHome }) {
             <div style={{ color: '#888', fontSize: '14px', fontStyle: 'italic' }}>Planet: {data.planet} | Sign: {data.sign}</div>
           </div>
 
-          <NumRow title="Birth Day Number" num={nums.birthDayNum} />
-          <NumRow title="Attitude Number" num={nums.attitudeNum} />
+          {NumRow({ title: "Birth Day Number", num: nums.birthDayNum })}
+          {NumRow({ title: "Attitude Number", num: nums.attitudeNum })}
           
           {nums.destinyNum > 0 && (
             <>
               <div style={{ borderTop: '2px dashed #444', margin: '24px 0' }} />
-              <NumRow title="Destiny Number" num={nums.destinyNum} />
-              <NumRow title="Soul Urge Number" num={nums.soulUrgeNum} />
-              <NumRow title="Personality Number" num={nums.personalityNum} />
+              {NumRow({ title: "Destiny Number", num: nums.destinyNum })}
+              {NumRow({ title: "Soul Urge Number", num: nums.soulUrgeNum })}
+              {NumRow({ title: "Personality Number", num: nums.personalityNum })}
             </>
           )}
 
           <div style={{ borderTop: '2px dashed #444', margin: '24px 0' }} />
           
-          <NumRow title="Universal Year" num={nums.universalYear} />
-          <NumRow title="Universal Month" num={nums.universalMonth} />
-          <NumRow title="Universal Day" num={nums.universalDay} />
+          {NumRow({ title: "Universal Year", num: nums.universalYear })}
+          {NumRow({ title: "Universal Month", num: nums.universalMonth })}
+          {NumRow({ title: "Universal Day", num: nums.universalDay })}
           
-          <NumRow title="Personal Year" num={nums.personalYear} />
-          <NumRow title="Personal Month" num={nums.personalMonth} />
-          <NumRow title="Personal Day" num={nums.personalDay} />
+          {NumRow({ title: "Personal Year", num: nums.personalYear })}
+          {NumRow({ title: "Personal Month", num: nums.personalMonth })}
+          {NumRow({ title: "Personal Day", num: nums.personalDay })}
         </div>
 
         <h3 style={{ margin: '24px 0 12px 0', fontSize: '24px', color: '#FFF' }}>Notes on this reading:</h3>
@@ -330,7 +330,7 @@ export default function NumerologyWorkbench({ goHome }) {
               <button onClick={() => setIsEditingMine(true)} style={{ position: 'absolute', top: '0px', right: '16px', backgroundColor: '#333', border: 'none', color: '#FFF', padding: '12px', borderRadius: '12px', zIndex: 10 }}>
                 <Edit3 size={24} />
               </button>
-              <ReadingCard nums={calculateAll(myBday, myFullName)} name="You" onSave={() => saveReadingToHistory('mine')} />
+              {ReadingCard({ nums: calculateAll(myBday, myFullName), name: "You", onSave: () => saveReadingToHistory('mine') })}
             </div>
           )}
         </>
@@ -360,7 +360,7 @@ export default function NumerologyWorkbench({ goHome }) {
           </div>
 
           {otherNumbers && (
-            <ReadingCard nums={otherNumbers} name={otherName || "Friend"} onSave={() => saveReadingToHistory('other')} />
+            {ReadingCard({ nums: otherNumbers, name: otherName || "Friend", onSave: () => saveReadingToHistory('other') })}
           )}
         </>
       )}

@@ -1,5 +1,6 @@
+import { Home, Sparkles, User, Users, Edit3, Save, History as HistoryIcon, Trash2, Share2, Mic, Layers, BookOpen, List, Calendar, ArrowLeft, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import {   ArrowLeft, Sparkles, Mic, Share2, Layers, BookOpen, Calendar as CalIcon, Save, List, Clock, Search, Trash2, ChevronDown, ChevronUp, User   } from 'lucide-react';
+
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { App as CapApp } from '@capacitor/app';
 
@@ -294,7 +295,7 @@ export default function TarotReader({ goHome }) {
                         <div key={c.id} style={{ backgroundColor: '#222', padding: '16px', borderRadius: '12px', borderLeft: '4px solid #FF9500' }}>
                           <div style={{ color: '#FF9500', fontSize: '22px', fontWeight: 'bold', marginBottom: '8px' }}>{c.name}</div>
                           <div style={{ color: '#E0E0E0', fontSize: '18px' }}>{c.meaning}</div>
-                          <MetadataTags card={c} />
+                          {MetadataTags({ card: c })}
                         </div>
                       ))}
                     </div>
@@ -368,7 +369,7 @@ export default function TarotReader({ goHome }) {
                 <div style={{ backgroundColor: '#1E1E1E', border: '2px solid #FF9500', borderRadius: '24px', padding: '32px', textAlign: 'center', marginBottom: '24px' }}>
                   <h3 style={{ color: '#FF9500', fontSize: '32px', marginBottom: '16px', marginTop: 0 }}>{drawnCard.name}</h3>
                   <p style={{ color: '#FFF', fontSize: '22px', lineHeight: '1.5', margin: '0 0 20px 0' }}>{drawnCard.meaning}</p>
-                  <div style={{ display: 'flex', justifyContent: 'center' }}><MetadataTags card={drawnCard} /></div>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>{MetadataTags({ card: drawnCard })}</div>
                 </div>
               )}
 
@@ -379,7 +380,7 @@ export default function TarotReader({ goHome }) {
                     <div key={c.id} style={{ backgroundColor: '#1E1E1E', padding: '20px', borderRadius: '16px', borderLeft: '6px solid #FF9500' }}>
                       <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#FF9500', marginBottom: '8px' }}>{c.name}</div>
                       <div style={{ fontSize: '18px', color: '#E0E0E0', marginBottom: '12px' }}>{c.meaning}</div>
-                      <MetadataTags card={c} />
+                      {MetadataTags({ card: c })}
                     </div>
                   ))}
                 </div>
