@@ -145,6 +145,7 @@ return (
       {renderProfile()}
 
       {/* 2. Family Call Roster */}
+      <>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h3 style={{ fontSize: '32px', color: '#FF9500', margin: 0 }}>Family Contacts</h3>
           <button onClick={() => setIsEditingContacts(!isEditingContacts)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '22px', fontWeight: 'bold', textDecoration: 'underline' }}>
@@ -159,7 +160,7 @@ return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <label style={{ alignSelf: 'center', cursor: 'pointer', marginBottom: '8px' }}>
                     <div style={{ width: '120px', height: '120px', borderRadius: '50%', backgroundColor: '#222', border: '4px solid #FF9500', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
-                      {contact.photo ? <img src={contact.photo} alt="Upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={48} color="#888" />}
+                      {contact.photo ? <img src={contact.photo} alt="Upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={48} color="#888" />}
                     </div>
                     <input type="file" accept="image/*" onChange={(e) => handleContactImageUpload(e, contact.id)} style={{ display: 'none' }} />
                     <div style={{ color: '#888', fontSize: '18px', textAlign: 'center', marginTop: '12px' }}>Tap to add photo</div>
@@ -210,7 +211,7 @@ return (
             <div style={{ textAlign: 'center', padding: '40px', color: '#888', fontSize: '22px', backgroundColor: '#111', borderRadius: '24px', border: '2px dashed #444' }}>Tap 'Edit List' to add family members.</div>
           )}
         </div>
-      </div>
+      </>
     </div>
   );
 }
