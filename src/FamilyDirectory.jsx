@@ -11,6 +11,13 @@ export default function FamilyDirectory({ goHome }) {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
+    const listener = CapApp.addListener('backButton', () => {
+      if (typeof goHome === 'function') goHome();
+    });
+    return () => { listener.remove(); };
+  }, [goHome]);
+
+  useEffect(() => {
     const savedProfile = localStorage.getItem('sovereign_owner_profile');
     if (savedProfile) setProfile(JSON.parse(savedProfile));
     
@@ -41,13 +48,6 @@ export default function FamilyDirectory({ goHome }) {
 
   const renderProfile = () => {
     if (isEditingProfile) {
-      
-  useEffect(() => {
-    const listener = CapApp.addListener('backButton', () => {
-      if (typeof goHome === 'function') goHome();
-    });
-    return () => { listener.remove(); };
-  }, [goHome]);
 return (
         <div style={{ backgroundColor: 'var(--surface)', padding: '24px', borderRadius: '24px', border: '2px solid var(--accent)', marginBottom: '32px' }}>
           <h2 style={{ color: 'var(--accent)', marginBottom: '20px', textAlign: 'center' }}>Edit My Details</h2>
