@@ -149,7 +149,11 @@ export default function SecureJournal({ goHome }) {
     const action = view === 'setup' ? handlePinSetup : (view === 'change_pin' ? handleChangePin : handleLogin);
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '24px', paddingBottom: '24px', alignItems: 'center', justifyContent: 'center' }}>
-        {view === 'change_pin' && <button onClick={() => setView('history')} style={{ position: 'absolute', top: '24px', left: '24px', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '16px', borderRadius: '16px', color: '#FFF', fontSize: '20px', fontWeight: 'bold', border: 'none' }}><ArrowLeft size={28} /> Back</button>}
+        {view === 'change_pin' ? (
+          <button onClick={() => setView('history')} style={{ position: 'absolute', top: '24px', left: '24px', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#333', padding: '16px', borderRadius: '16px', color: '#FFF', fontSize: '20px', fontWeight: 'bold', border: 'none' }}><ArrowLeft size={28} /> Back</button>
+        ) : (
+          <button onClick={goHome} style={{ position: 'absolute', top: '24px', left: '24px', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FF9500', padding: '16px', borderRadius: '16px', color: '#000', fontSize: '20px', fontWeight: 'bold', border: 'none', zIndex: 50 }}><Home size={28} /> Home</button>
+        )}
         <Lock size={64} color="#FF9500" style={{ marginBottom: '24px' }} />
         <h2 style={{ color: '#FFF', fontSize: '32px', marginBottom: '12px', textAlign: 'center' }}>{title}</h2>
         {pinError && <div style={{ color: '#FF3B30', fontSize: '20px', marginBottom: '12px', fontWeight: 'bold' }}>{pinError}</div>}
