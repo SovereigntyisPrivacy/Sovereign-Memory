@@ -23,6 +23,10 @@ export default function SecureJournal({ goHome }) {
 
   useEffect(() => {
     checkPinSetup();
+  }, []);
+
+  useEffect(() => {
+    
     const listener = CapApp.addListener('backButton', () => {
       if (view === 'history' && typeof goHome === 'function') goHome();
       else if (view !== 'auth' && view !== 'setup') setView('history');
