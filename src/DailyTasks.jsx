@@ -175,7 +175,7 @@ export default function DailyTasks({ goHome }) {
         <div style={{ backgroundColor: '#222', padding: '16px', borderRadius: '20px', border: '2px solid #444' }}>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', width: '100%', boxSizing: 'border-box' }}>
             <input value={newTaskText} onChange={e => setNewTaskText(e.target.value)} placeholder="Type new task here..." style={{ flex: 1, minWidth: 0, backgroundColor: '#111', color: '#FFF', fontSize: '20px', padding: '16px', borderRadius: '12px', border: 'none', outline: 'none' }} />
-            <button onClick={() => toggleDictation(setNewTaskText)} style={{ backgroundColor: '#333', padding: '16px', borderRadius: '12px', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
+            <button onClick={() => toggleDictation(setNewTaskText)} style={{ width: '64px', height: '64px', padding: '0', backgroundColor: '#333', borderRadius: '12px', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
               <Mic size={28} color={isListening ? '#00FF00' : '#FF9500'} />
             </button>
           </div>
@@ -204,7 +204,7 @@ export default function DailyTasks({ goHome }) {
           <div style={{ backgroundColor: '#FF9500', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', width: '100%', boxSizing: 'border-box' }}>
               <input value={newListTitle} onChange={e => setNewListTitle(e.target.value)} placeholder="List Title..." style={{ flex: 1, minWidth: 0, backgroundColor: 'rgba(0,0,0,0.2)', color: '#000', fontSize: '22px', padding: '16px', borderRadius: '12px', border: 'none', outline: 'none', fontWeight: 'bold' }} />
-              <button onClick={() => toggleDictation(setNewListTitle)} style={{ backgroundColor: '#000', padding: '16px', borderRadius: '12px', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
+              <button onClick={() => toggleDictation(setNewListTitle)} style={{ width: '64px', height: '64px', padding: '0', backgroundColor: '#000', borderRadius: '12px', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
                 <Mic size={24} color="#FF9500" />
               </button>
             </div>
