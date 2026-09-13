@@ -108,8 +108,18 @@ return (
     );
   };
 
+  
+  const handleContactImageUpload = (e, id) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => updateContact(id, 'photo', reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
   const addContact = () => {
-    saveContacts([...contacts, { id: Date.now(), name: '', phone: '', relation: '' }]);
+    saveContacts([...contacts, { id: Date.now(), name: '', phone: '', relation: '', email: '', address: '', photo: '' }]);
     setIsEditingContacts(true);
   };
 
@@ -135,50 +145,72 @@ return (
       {renderProfile()}
 
       {/* 2. Family Call Roster */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h3 style={{ fontSize: '24px', color: '#FFF', margin: 0 }}>Family Contacts</h3>
-        <button onClick={() => setIsEditingContacts(!isEditingContacts)} style={{ backgroundColor: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '18px' }}>
-          {isEditingContacts ? 'Done Editing' : 'Edit List'}
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {contacts.map((contact) => (
-          <div key={contact.id} style={{ backgroundColor: 'var(--surface)', padding: '20px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {isEditingContacts ? (
-              <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, gap: '12px' }}>
-                <input value={contact.name} onChange={(e) => updateContact(contact.id, 'name', e.target.value)} placeholder="Name" style={{ padding: '12px', fontSize: '18px', borderRadius: '8px', backgroundColor: '#222', color: '#FFF', border: '1px solid #555' }} />
-                <input value={contact.relation} onChange={(e) => updateContact(contact.id, 'relation', e.target.value)} placeholder="Relation (e.g. Son)" style={{ padding: '12px', fontSize: '18px', borderRadius: '8px', backgroundColor: '#222', color: '#FFF', border: '1px solid #555' }} />
-                <input value={contact.phone} onChange={(e) => updateContact(contact.id, 'phone', e.target.value)} placeholder="Phone Number" style={{ padding: '12px', fontSize: '18px', borderRadius: '8px', backgroundColor: '#222', color: '#FFF', border: '1px solid #555' }} />
-                <button onClick={() => deleteContact(contact.id)} style={{ backgroundColor: 'transparent', border: '2px solid var(--error)', color: 'var(--error)', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  <Trash2 size={24} /> Remove Contact
-                </button>
-              </div>
-            ) : (
-              <>
-                <div style={{ flexGrow: 1 }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#FFF', marginBottom: '4px' }}>{contact.name || "Unnamed"}</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '18px' }}>{contact.relation}</div>
-                </div>
-                <a href={`tel:${contact.phone}`} style={{ backgroundColor: '#2E7D32', width: '70px', height: '70px', borderRadius: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#FFF', textDecoration: 'none', flexShrink: 0 }}>
-                  <Phone size={32} />
-                </a>
-              </>
-            )}
-          </div>
-        ))}
-
-        {isEditingContacts && (
-          <button onClick={addContact} style={{ backgroundColor: '#333', border: '2px dashed #666', color: '#FFF', padding: '20px', borderRadius: '20px', fontSize: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
-            <Plus size={28} /> Add New Contact
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '32px', color: '#FF9500', margin: 0 }}>Family Contacts</h3>
+          <button onClick={() => setIsEditingContacts(!isEditingContacts)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '22px', fontWeight: 'bold', textDecoration: 'underline' }}>
+            {isEditingContacts ? 'Done Editing' : 'Edit List'}
           </button>
-        )}
-        
-        {!isEditingContacts && contacts.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#666', fontSize: '20px' }}>Tap 'Edit List' to add family members.</div>
-        )}
-      </div>
+        </div>
 
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {contacts.map((contact) => (
+            <div key={contact.id} style={{ backgroundColor: '#111', padding: '24px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '16px', border: '2px solid #333' }}>
+              {isEditingContacts ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <label style={{ alignSelf: 'center', cursor: 'pointer', marginBottom: '8px' }}>
+                    <div style={{ width: '120px', height: '120px', borderRadius: '50%', backgroundColor: '#222', border: '4px solid #FF9500', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+                      {contact.photo ? <img src={contact.photo} alt="Upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={48} color="#888" />}
+                    </div>
+                    <input type="file" accept="image/*" onChange={(e) => handleContactImageUpload(e, contact.id)} style={{ display: 'none' }} />
+                    <div style={{ color: '#888', fontSize: '18px', textAlign: 'center', marginTop: '12px' }}>Tap to add photo</div>
+                  </label>
+                  <input value={contact.name || ''} onChange={(e) => updateContact(contact.id, 'name', e.target.value)} placeholder="Name" style={{ padding: '20px', fontSize: '24px', borderRadius: '16px', backgroundColor: '#222', color: '#FFF', border: '2px solid #555', outline: 'none' }} />
+                  <input value={contact.relation || ''} onChange={(e) => updateContact(contact.id, 'relation', e.target.value)} placeholder="Relation (e.g. Son)" style={{ padding: '20px', fontSize: '24px', borderRadius: '16px', backgroundColor: '#222', color: '#FFF', border: '2px solid #555', outline: 'none' }} />
+                  <input value={contact.phone || ''} onChange={(e) => updateContact(contact.id, 'phone', e.target.value)} placeholder="Phone Number" style={{ padding: '20px', fontSize: '24px', borderRadius: '16px', backgroundColor: '#222', color: '#FFF', border: '2px solid #555', outline: 'none' }} />
+                  <input value={contact.email || ''} onChange={(e) => updateContact(contact.id, 'email', e.target.value)} placeholder="Email Address" style={{ padding: '20px', fontSize: '24px', borderRadius: '16px', backgroundColor: '#222', color: '#FFF', border: '2px solid #555', outline: 'none' }} />
+                  <textarea value={contact.address || ''} onChange={(e) => updateContact(contact.id, 'address', e.target.value)} placeholder="Home Address" style={{ padding: '20px', fontSize: '24px', borderRadius: '16px', backgroundColor: '#222', color: '#FFF', border: '2px solid #555', minHeight: '120px', resize: 'none', outline: 'none' }} />
+                  <button onClick={() => deleteContact(contact.id)} style={{ backgroundColor: '#441111', border: '2px solid #FF3B30', color: '#FF3B30', padding: '20px', borderRadius: '16px', fontSize: '24px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+                    <Trash2 size={32} /> Remove Contact
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <div style={{ width: '100px', height: '100px', borderRadius: '50%', backgroundColor: '#222', border: '4px solid #FF9500', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                      {contact.photo ? <img src={contact.photo} alt={contact.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={48} color="#888" />}
+                    </div>
+                    <div style={{ flexGrow: 1 }}>
+                      <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#FFF' }}>{contact.name || "Unnamed"}</div>
+                      <div style={{ color: '#FF9500', fontSize: '24px', fontWeight: 'bold', marginTop: '4px' }}>{contact.relation}</div>
+                    </div>
+                    {contact.phone && (
+                      <a href={`tel:${contact.phone}`} style={{ backgroundColor: '#2E7D32', width: '80px', height: '80px', borderRadius: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#FFF', textDecoration: 'none', flexShrink: 0 }}>
+                        <Phone size={40} />
+                      </a>
+                    )}
+                  </div>
+                  {(contact.email || contact.address) && (
+                    <div style={{ backgroundColor: '#222', padding: '20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {contact.email && <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#CCC', fontSize: '22px' }}><Mail size={28} color="#FF9500" style={{ flexShrink: 0 }} /> <a href={`mailto:${contact.email}`} style={{ color: '#CCC', textDecoration: 'none', wordBreak: 'break-all' }}>{contact.email}</a></div>}
+                      {contact.address && <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', color: '#CCC', fontSize: '22px' }}><MapPin size={28} color="#FF9500" style={{ flexShrink: 0, marginTop: '4px' }} /> <div style={{ lineHeight: '1.4' }}>{contact.address}</div></div>}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {isEditingContacts && (
+            <button onClick={addContact} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: '#333', border: '2px dashed #FF9500', borderRadius: '24px', padding: '24px', color: '#FF9500', fontSize: '26px', fontWeight: 'bold' }}>
+              <Plus size={36} /> Add New Contact
+            </button>
+          )}
+
+          {!isEditingContacts && contacts.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#888', fontSize: '22px', backgroundColor: '#111', borderRadius: '24px', border: '2px dashed #444' }}>Tap 'Edit List' to add family members.</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
