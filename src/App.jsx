@@ -8,6 +8,7 @@ import MedicationManager from './MedicationManager';
 import SecureJournal from './SecureJournal';
 import FamilyDirectory from './FamilyDirectory';
 import TarotReader from './TarotReader';
+import RuneWorkbench from './RuneWorkbench';
 import BrainGames from './BrainGames';
 
 export default function App() {
