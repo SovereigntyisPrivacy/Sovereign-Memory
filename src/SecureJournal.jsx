@@ -187,16 +187,16 @@ export default function SecureJournal({ goHome }) {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {isLocked && <Lock size={28} color="#FF3B30" />}
-                {isExpanded ? <ChevronUp size={36} color="#FFF" /> : <ChevronDown size={36} color="#FFF" />}
+                {isExpanded ? <ChevronUp size={28} color="#FFF" /> : <ChevronDown size={28} color="#FFF" />}
               </div>
             </button>
             {isExpanded && (
               <div style={{ padding: '24px', borderTop: '2px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.4)' }}>
                 <p style={{ color: '#FFF', fontSize: '26px', lineHeight: '1.6', margin: '0 0 24px 0', whiteSpace: 'pre-wrap' }}>{entry.text || "Empty entry..."}</p>
                 {isLocked ? (
-                  <button onClick={() => exportAndDelete(entry)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', backgroundColor: '#112244', border: '4px solid #3B82F6', borderRadius: '24px', color: '#3B82F6', fontSize: '24px', fontWeight: 'bold', minHeight: '90px', padding: '20px' }}><Share2 size={32} /> AES Export & Erase</button>
+                  <button onClick={() => exportAndDelete(entry)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', backgroundColor: '#112244', border: '4px solid #3B82F6', borderRadius: '24px', color: '#3B82F6', fontSize: '24px', fontWeight: 'bold', padding: '16px', padding: '20px' }}><Share2 size={32} /> AES Export & Erase</button>
                 ) : (
-                  <button onClick={() => openEntry(entry)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: '#FF9500', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none', borderRadius: '24px', minHeight: '90px', padding: '20px' }}><Edit3 size={32} /> Edit Entry</button>
+                  <button onClick={() => openEntry(entry)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', backgroundColor: '#FF9500', color: '#000', fontSize: '24px', fontWeight: 'bold', border: 'none', borderRadius: '24px', padding: '16px', padding: '20px' }}><Edit3 size={32} /> Edit Entry</button>
                 )}
               </div>
             )}
@@ -244,12 +244,12 @@ export default function SecureJournal({ goHome }) {
 
           {!isEntryLocked ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-              <button onClick={toggleDictation} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: isListening ? '#FF9500' : '#333', border: '2px solid #FF9500', borderRadius: '24px', color: isListening ? '#000' : '#FFF', fontSize: '24px', fontWeight: 'bold', minHeight: '90px' }}><Mic size={36} color={isListening ? '#000' : '#FF9500'} /></button>
-              <button onClick={saveEntry} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#2E7D32', border: 'none', borderRadius: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', minHeight: '90px' }}><Save size={36} /></button>
-              <button onClick={() => deleteEntry(activeEntry.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#441111', border: '2px solid #FF3B30', borderRadius: '24px', color: '#FF3B30', fontSize: '24px', fontWeight: 'bold', minHeight: '90px' }}><Trash2 size={36} /></button>
+              <button onClick={toggleDictation} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: isListening ? '#FF9500' : '#333', border: '2px solid #FF9500', borderRadius: '24px', color: isListening ? '#000' : '#FFF', fontSize: '24px', fontWeight: 'bold', padding: '16px' }}><Mic size={28} color={isListening ? '#000' : '#FF9500'} /></button>
+              <button onClick={saveEntry} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#2E7D32', border: 'none', borderRadius: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', padding: '16px' }}><Save size={28} /></button>
+              <button onClick={() => deleteEntry(activeEntry.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#441111', border: '2px solid #FF3B30', borderRadius: '24px', color: '#FF3B30', fontSize: '24px', fontWeight: 'bold', padding: '16px' }}><Trash2 size={28} /></button>
             </div>
           ) : (
-            <button onClick={() => exportAndDelete(activeEntry)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', backgroundColor: '#112244', border: '4px solid #3B82F6', borderRadius: '24px', color: '#3B82F6', fontSize: '28px', fontWeight: 'bold', minHeight: '100px', padding: '24px' }}><Share2 size={40} /> AES Export & Erase</button>
+            <button onClick={() => exportAndDelete(activeEntry)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', backgroundColor: '#112244', border: '4px solid #3B82F6', borderRadius: '24px', color: '#3B82F6', fontSize: '28px', fontWeight: 'bold', padding: '20px', padding: '24px' }}><Share2 size={32} /> AES Export & Erase</button>
           )}
         </div>
       )}

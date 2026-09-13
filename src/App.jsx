@@ -69,6 +69,9 @@ export default function App() {
           <button onClick={() => setActiveTab('family')} style={{ backgroundColor: '#222', border: '1px solid #444', borderRadius: '16px', padding: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '16px' }}>
             <Phone size={32} color="var(--accent)" /> Call Family
           </button>
+        <button onClick={() => setActiveTab('runes')} style={{ backgroundColor: '#222', border: '1px solid #444', borderRadius: '16px', padding: '24px', color: '#FFF', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ fontSize: '32px', color: 'var(--accent)', width: '32px', textAlign: 'center' }}>ᚱ</div> Elder Runes
+        </button>
         </div>
       )}
 
@@ -79,6 +82,7 @@ export default function App() {
       {activeTab === 'meds' && <MedicationManager goHome={() => setActiveTab('home')} />}
       {activeTab === 'journal' && <SecureJournal goHome={() => setActiveTab('home')} />}
       {activeTab === 'family' && <FamilyDirectory goHome={() => setActiveTab('home')} />}
+      {activeTab === 'runes' && <RuneWorkbench goHome={() => setActiveTab('home')} />}
     </div>
   );
 }
