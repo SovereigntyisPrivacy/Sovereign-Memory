@@ -26,8 +26,22 @@ export default function MedicationManager({ goHome }) {
   useEffect(() => {
     const savedMeds = localStorage.getItem('sovereign_meds');
     const savedHistory = localStorage.getItem('sovereign_meds_history');
-    if (savedMeds) setMeds(JSON.parse(savedMeds));
-    if (savedHistory) setHistory(JSON.parse(savedHistory));
+    
+    if (savedMeds) {
+      try {
+        const parsed = JSON.parse(savedMeds);
+        // Safely rescue and upgrade any legacy pills to the new format
+        const upgraded = parsed.map(m => ({
+          ...m,
+          type: m.type || (m.isCombo ? 'combo2' : 'none')
+        }));
+        setMeds(upgraded);
+      } catch(e) {}
+    }
+    
+    if (savedHistory) {
+      try { setHistory(JSON.parse(savedHistory)); } catch(e) {}
+    }
     
     const listener = CapApp.addListener('backButton', () => {
       if (view === 'active' && typeof goHome === 'function') goHome();
@@ -43,7 +57,7 @@ export default function MedicationManager({ goHome }) {
     if (!medName.trim()) return alert("Please enter a medication name.");
     const newMed = { 
       id: Date.now(), name: medName, type: comboMode,
-      mg: medMg, prescriber: medPrescriber, purpose: medPurpose,
+      mg: medMg, prescriber: medPrescriber, purpose: medPurpose, instructions: '',
       dosage: medDosage, frequency: medFrequency, time: medTime,
       doses: (comboMode === 'none' || comboMode === 'mixed3') ? (parseInt(b1Doses) || 0) : null,
       bottle1: comboMode !== 'none' ? { name: b1Name || 'Pill 1', doses: parseInt(b1Doses) || 0 } : null,
@@ -120,14 +134,14 @@ export default function MedicationManager({ goHome }) {
         const isMultiBottle = med.type === 'combo2' || med.type === 'combo3';
         const isMixedBottle = med.type === 'mixed3';
         
-        // Math Engine: Check if ANY bottle is below 10 pills
+        // Math Engine: Check if ANY bottle is below 10 pills (safe for legacy data)
         const lowWarnings = [];
         if (isMultiBottle) {
-           if (med.bottle1.doses <= 10) lowWarnings.push(med.bottle1.name);
-           if (med.bottle2.doses <= 10) lowWarnings.push(med.bottle2.name);
-           if (med.type === 'combo3' && med.bottle3.doses <= 10) lowWarnings.push(med.bottle3.name);
+           if (med.bottle1 && med.bottle1.doses <= 10) lowWarnings.push(med.bottle1.name);
+           if (med.bottle2 && med.bottle2.doses <= 10) lowWarnings.push(med.bottle2.name);
+           if (med.bottle3 && med.bottle3.doses <= 10) lowWarnings.push(med.bottle3.name);
         } else {
-           if (med.doses <= 10) lowWarnings.push(med.name);
+           if (med.doses !== null && med.doses !== undefined && med.doses <= 10) lowWarnings.push(med.name);
         }
 
         return (
@@ -137,6 +151,7 @@ export default function MedicationManager({ goHome }) {
             <div style={{ flexGrow: 1 }}>
               <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#FFF', lineHeight: '1.2' }}>{med.name} {med.mg && <span style={{fontSize: '24px', color: '#CCC'}}>({med.mg})</span>}</div>
               {med.purpose && <div style={{ fontSize: '22px', color: '#AAA', fontStyle: 'italic', marginTop: '4px' }}>For: {med.purpose}</div>}
+              {med.instructions && <div style={{ fontSize: '22px', color: '#FF9500', fontWeight: 'bold', fontStyle: 'italic', marginTop: '4px' }}>{med.instructions}</div>}
               {med.prescriber && <div style={{ fontSize: '20px', color: '#888', marginTop: '4px' }}>Prescribed by {med.prescriber}</div>}
             </div>
           </div>
@@ -160,17 +175,21 @@ export default function MedicationManager({ goHome }) {
           
           {isMultiBottle ? (
             <div style={{ display: 'grid', gridTemplateColumns: med.type === 'combo3' ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
-              <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', minHeight: '44px', display: 'flex', alignItems: 'center' }}>{med.bottle1.name}</div>
-                <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle1.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle1.doses}</div>
-                <button onClick={() => handleRefill(med, 'bottle1')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold' }}><RotateCcw size={18} /> Refill</button>
-              </div>
-              <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', minHeight: '44px', display: 'flex', alignItems: 'center' }}>{med.bottle2.name}</div>
-                <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle2.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle2.doses}</div>
-                <button onClick={() => handleRefill(med, 'bottle2')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold' }}><RotateCcw size={18} /> Refill</button>
-              </div>
-              {med.type === 'combo3' && (
+              {med.bottle1 && (
+                <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', minHeight: '44px', display: 'flex', alignItems: 'center' }}>{med.bottle1.name}</div>
+                  <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle1.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle1.doses}</div>
+                  <button onClick={() => handleRefill(med, 'bottle1')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold' }}><RotateCcw size={18} /> Refill</button>
+                </div>
+              )}
+              {med.bottle2 && (
+                <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', minHeight: '44px', display: 'flex', alignItems: 'center' }}>{med.bottle2.name}</div>
+                  <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle2.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle2.doses}</div>
+                  <button onClick={() => handleRefill(med, 'bottle2')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold' }}><RotateCcw size={18} /> Refill</button>
+                </div>
+              )}
+              {med.type === 'combo3' && med.bottle3 && (
                 <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
                   <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', minHeight: '44px', display: 'flex', alignItems: 'center' }}>{med.bottle3.name}</div>
                   <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle3.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle3.doses}</div>
