@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { App as CapApp } from '@capacitor/app';
-import { Home, Plus, Check, History as HistoryIcon, Pill, RotateCcw, Trash2, Calendar, AlarmClock, AlertTriangle } from 'lucide-react';
+import { Home, Plus, Check, History as HistoryIcon, Pill, RotateCcw, Trash2, Calendar, AlarmClock, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function MedicationManager({ goHome }) {
   const [view, setView] = useState('active'); 
   const [step, setStep] = useState(1);
+  const [expandedMeds, setExpandedMeds] = useState({});
   const [meds, setMeds] = useState([]);
   const [history, setHistory] = useState([]);
   
@@ -52,6 +53,8 @@ export default function MedicationManager({ goHome }) {
 
   const saveMeds = (updated) => { setMeds(updated); localStorage.setItem('sovereign_meds', JSON.stringify(updated)); };
   const saveHistory = (updated) => { setHistory(updated); localStorage.setItem('sovereign_meds_history', JSON.stringify(updated)); };
+
+  const toggleExpand = (id) => setExpandedMeds(prev => ({ ...prev, [id]: !prev[id] }));
 
   const addMedication = () => {
     if (!medName.trim()) return alert("Please enter a medication name.");
@@ -140,6 +143,7 @@ export default function MedicationManager({ goHome }) {
       {meds.length === 0 ? <p style={{ color: '#888', textAlign: 'center', fontSize: '24px', marginTop: '40px' }}>No medications added.</p> : meds.map(med => {
         const isMultiBottle = med.type === 'combo2' || med.type === 'combo3';
         const isMixedBottle = med.type === 'mixed3';
+        const isExpanded = expandedMeds[med.id];
         
         const lowWarnings = [];
         if (isMultiBottle) {
@@ -150,7 +154,6 @@ export default function MedicationManager({ goHome }) {
            if (med.doses !== null && med.doses !== undefined && med.doses <= 10) lowWarnings.push(med.name);
         }
 
-        // Auto-Math for Alarms
         const alarmTimes = [];
         if (med.time && med.frequency !== 'As Needed') {
             alarmTimes.push(med.time);
@@ -162,97 +165,112 @@ export default function MedicationManager({ goHome }) {
         }
 
         return (
-        <div key={med.id} style={{ backgroundColor: '#111', border: lowWarnings.length > 0 ? '4px solid #FF3B30' : '3px solid #333', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxSizing: 'border-box' }}>
+        <div key={med.id} style={{ backgroundColor: '#111', border: lowWarnings.length > 0 ? '4px solid #FF3B30' : '3px solid #333', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <button onClick={() => toggleExpand(med.id)} style={{ width: '100%', backgroundColor: 'transparent', border: 'none', padding: 0, textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ flexGrow: 1 }}>
               <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#FFF', lineHeight: '1.2' }}>{med.name}</div>
-              {med.purpose && <div style={{ fontSize: '22px', color: '#AAA', fontStyle: 'italic', marginTop: '4px' }}>For: {med.purpose}</div>}
-              {med.prescriber && <div style={{ fontSize: '20px', color: '#888', marginTop: '4px' }}>Prescribed by {med.prescriber}</div>}
-            </div>
-          </div>
-
-          <div style={{ backgroundColor: '#222', borderRadius: '16px', padding: '16px', borderLeft: '4px solid #FF9500', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-             <div style={{ fontSize: '24px', color: '#FFF', fontWeight: 'bold' }}>
-               {!isMultiBottle && `Take ${med.dosage || '1'}`}
-               {med.frequency && ` • ${med.frequency}`}
-             </div>
-          </div>
-
-          {alarmTimes.length > 0 && (
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {alarmTimes.map((t, idx) => (
-                   <button key={idx} onClick={() => setNativeAlarm(med.name, t)} style={{ backgroundColor: '#112244', border: '3px solid #3B82F6', borderRadius: '16px', padding: '16px', color: '#3B82F6', fontSize: '20px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><AlarmClock size={24} /> Dose {idx + 1}: {formatTime(t)}</div>
-                     <span>Set Alarm</span>
-                   </button>
-                ))}
-             </div>
-          )}
-
-          {lowWarnings.length > 0 && (
-             <div style={{ backgroundColor: '#441111', border: '2px solid #FF3B30', borderRadius: '16px', padding: '16px', color: '#FF3B30', fontSize: '22px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <AlertTriangle size={28} /> Low Supply: {lowWarnings.join(', ')}
-             </div>
-          )}
-          
-          {isMultiBottle ? (
-            <div style={{ display: 'grid', gridTemplateColumns: med.type === 'combo3' ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
-              {med.bottle1 && (
-                <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle1.name}</div>
-                  <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle1.take || 1}</div>
-                  <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle1.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle1.doses}</div>
-                  <button onClick={() => handleRefill(med, 'bottle1')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
-                </div>
-              )}
-              {med.bottle2 && (
-                <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle2.name}</div>
-                  <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle2.take || 1}</div>
-                  <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle2.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle2.doses}</div>
-                  <button onClick={() => handleRefill(med, 'bottle2')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
-                </div>
-              )}
-              {med.type === 'combo3' && med.bottle3 && (
-                <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle3.name}</div>
-                  <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle3.take || 1}</div>
-                  <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle3.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle3.doses}</div>
-                  <button onClick={() => handleRefill(med, 'bottle3')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
-                </div>
-              )}
-            </div>
-          ) : isMixedBottle ? (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ color: '#FF9500', fontWeight: 'bold', fontSize: '20px' }}>Bottle Contains:</div>
-                <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle1?.name}</div>
-                <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle2?.name}</div>
-                <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle3?.name}</div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                <div style={{ fontSize: '48px', fontWeight: 'bold', color: med.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.doses}</div>
-                <button onClick={() => handleRefill(med, 'doses')} style={{ backgroundColor: '#112244', border: '3px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold' }}><RotateCcw size={20} /> Refill</button>
+              <div style={{ fontSize: '22px', color: '#FF9500', fontWeight: 'bold', marginTop: '6px' }}>
+                {med.time ? formatTime(med.time) : ''} {med.time && med.frequency && med.frequency !== 'As Needed' ? ' | ' : ''} {med.frequency || ''}
               </div>
             </div>
-          ) : (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px' }}>
-              <div style={{ fontSize: '20px', color: '#CCC', fontWeight: 'bold' }}>Inventory Remaining</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ fontSize: '48px', fontWeight: 'bold', color: med.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.doses}</div>
-                <button onClick={() => handleRefill(med, 'doses')} style={{ backgroundColor: '#112244', border: '3px solid #3B82F6', borderRadius: '16px', padding: '20px', color: '#3B82F6', fontSize: '22px', fontWeight: 'bold' }}><RotateCcw size={28} /></button>
-              </div>
-            </div>
-          )}
-
-          <button onClick={() => takeDose(med)} style={{ width: '100%', backgroundColor: '#2E7D32', border: 'none', borderRadius: '20px', padding: '24px', color: '#FFF', fontSize: '28px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
-            <Check size={36} /> Log Dose
+            {isExpanded ? <ChevronUp size={44} color="#888" /> : <ChevronDown size={44} color="#888" />}
           </button>
-          
-          <button onClick={() => deleteMed(med.id)} style={{ backgroundColor: 'transparent', border: 'none', color: '#666', fontSize: '20px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-            <Trash2 size={24} /> Remove Med
-          </button>
+
+          {isExpanded && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '20px', paddingTop: '20px', borderTop: '2px solid #333' }}>
+              
+              {(med.purpose || med.prescriber) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {med.purpose && <div style={{ fontSize: '22px', color: '#AAA', fontStyle: 'italic' }}>For: {med.purpose}</div>}
+                  {med.prescriber && <div style={{ fontSize: '20px', color: '#888' }}>Prescribed by {med.prescriber}</div>}
+                </div>
+              )}
+
+              <div style={{ backgroundColor: '#222', borderRadius: '16px', padding: '16px', borderLeft: '4px solid #FF9500' }}>
+                <div style={{ fontSize: '24px', color: '#FFF', fontWeight: 'bold' }}>
+                  {!isMultiBottle && `Take ${med.dosage || '1'} `}
+                  {isMultiBottle && 'Combo Dose '}
+                  {med.frequency && ` • ${med.frequency}`}
+                </div>
+              </div>
+
+              {alarmTimes.length > 0 && (
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {alarmTimes.map((t, idx) => (
+                       <button key={idx} onClick={() => setNativeAlarm(med.name, t)} style={{ backgroundColor: '#112244', border: '3px solid #3B82F6', borderRadius: '16px', padding: '16px', color: '#3B82F6', fontSize: '20px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><AlarmClock size={24} /> Dose {idx + 1}: {formatTime(t)}</div>
+                         <span>Set Alarm</span>
+                       </button>
+                    ))}
+                 </div>
+              )}
+
+              {lowWarnings.length > 0 && (
+                 <div style={{ backgroundColor: '#441111', border: '2px solid #FF3B30', borderRadius: '16px', padding: '16px', color: '#FF3B30', fontSize: '22px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <AlertTriangle size={28} /> Low Supply: {lowWarnings.join(', ')}
+                 </div>
+              )}
+              
+              {isMultiBottle ? (
+                <div style={{ display: 'grid', gridTemplateColumns: med.type === 'combo3' ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
+                  {med.bottle1 && (
+                    <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle1.name}</div>
+                      <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle1.take || 1}</div>
+                      <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle1.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle1.doses}</div>
+                      <button onClick={() => handleRefill(med, 'bottle1')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
+                    </div>
+                  )}
+                  {med.bottle2 && (
+                    <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle2.name}</div>
+                      <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle2.take || 1}</div>
+                      <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle2.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle2.doses}</div>
+                      <button onClick={() => handleRefill(med, 'bottle2')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
+                    </div>
+                  )}
+                  {med.type === 'combo3' && med.bottle3 && (
+                    <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle3.name}</div>
+                      <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle3.take || 1}</div>
+                      <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle3.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle3.doses}</div>
+                      <button onClick={() => handleRefill(med, 'bottle3')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
+                    </div>
+                  )}
+                </div>
+              ) : isMixedBottle ? (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ color: '#FF9500', fontWeight: 'bold', fontSize: '20px' }}>Bottle Contains:</div>
+                    <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle1?.name}</div>
+                    <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle2?.name}</div>
+                    <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle3?.name}</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ fontSize: '48px', fontWeight: 'bold', color: med.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.doses}</div>
+                    <button onClick={() => handleRefill(med, 'doses')} style={{ backgroundColor: '#112244', border: '3px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold' }}><RotateCcw size={20} /> Refill</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px' }}>
+                  <div style={{ fontSize: '20px', color: '#CCC', fontWeight: 'bold' }}>Inventory Remaining</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ fontSize: '48px', fontWeight: 'bold', color: med.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.doses}</div>
+                    <button onClick={() => handleRefill(med, 'doses')} style={{ backgroundColor: '#112244', border: '3px solid #3B82F6', borderRadius: '16px', padding: '20px', color: '#3B82F6', fontSize: '22px', fontWeight: 'bold' }}><RotateCcw size={28} /></button>
+                  </div>
+                </div>
+              )}
+
+              <button onClick={() => takeDose(med)} style={{ width: '100%', backgroundColor: '#2E7D32', border: 'none', borderRadius: '20px', padding: '24px', color: '#FFF', fontSize: '28px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+                <Check size={36} /> Log Dose
+              </button>
+              
+              <button onClick={() => deleteMed(med.id)} style={{ backgroundColor: 'transparent', border: 'none', color: '#666', fontSize: '20px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                <Trash2 size={24} /> Remove Med
+              </button>
+            </div>
+          )}
         </div>
       )})}
     </div>
