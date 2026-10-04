@@ -29,13 +29,11 @@ export default function MedicationManager({ goHome }) {
   useEffect(() => {
     const savedMeds = localStorage.getItem('sovereign_meds');
     const savedHistory = localStorage.getItem('sovereign_meds_history');
-    
     if (savedMeds) {
       try {
         const parsed = JSON.parse(savedMeds);
         const upgraded = parsed.map(m => ({
-          ...m,
-          type: m.type || (m.isCombo ? 'combo2' : 'none'),
+          ...m, type: m.type || (m.isCombo ? 'combo2' : 'none'),
           bottle1: m.bottle1 ? { ...m.bottle1, take: m.bottle1.take || parseInt(m.dosage) || 1 } : null,
           bottle2: m.bottle2 ? { ...m.bottle2, take: m.bottle2.take || parseInt(m.dosage) || 1 } : null,
           bottle3: m.bottle3 ? { ...m.bottle3, take: m.bottle3.take || parseInt(m.dosage) || 1 } : null
@@ -43,10 +41,7 @@ export default function MedicationManager({ goHome }) {
         setMeds(upgraded);
       } catch(e) {}
     }
-    
-    if (savedHistory) {
-      try { setHistory(JSON.parse(savedHistory)); } catch(e) {}
-    }
+    if (savedHistory) { try { setHistory(JSON.parse(savedHistory)); } catch(e) {} }
     
     const listener = CapApp.addListener('backButton', () => {
       if (view === 'active' && typeof goHome === 'function') goHome();
@@ -72,8 +67,7 @@ export default function MedicationManager({ goHome }) {
     saveMeds([...meds, newMed]);
     setMedName(''); setMedPrescriber(''); setMedPurpose(''); setMedDosage(''); setMedFrequency(''); setMedTime('');
     setComboMode('none'); setB1Name(''); setB2Name(''); setB3Name(''); setB1Doses(''); setB2Doses(''); setB3Doses(''); setB1Take(''); setB2Take(''); setB3Take('');
-    setStep(1);
-    setView('active');
+    setStep(1); setView('active');
   };
 
   const deleteMed = (id) => { if (window.confirm("Remove this medication?")) saveMeds(meds.filter(m => m.id !== id)); };
@@ -115,6 +109,13 @@ export default function MedicationManager({ goHome }) {
     window.location.href = intentUrl;
   };
 
+  const addHours = (timeStr, hours) => {
+    if (!timeStr) return '';
+    let [h, m] = timeStr.split(':').map(Number);
+    h = (h + hours) % 24;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  };
+
   const formatTime = (timeStr) => {
     if (!timeStr) return '';
     const [h, m] = timeStr.split(':');
@@ -149,6 +150,17 @@ export default function MedicationManager({ goHome }) {
            if (med.doses !== null && med.doses !== undefined && med.doses <= 10) lowWarnings.push(med.name);
         }
 
+        // Auto-Math for Alarms
+        const alarmTimes = [];
+        if (med.time && med.frequency !== 'As Needed') {
+            alarmTimes.push(med.time);
+            if (med.frequency === 'Twice Daily') alarmTimes.push(addHours(med.time, 12));
+            if (med.frequency === 'Three Times Daily') {
+                alarmTimes.push(addHours(med.time, 8));
+                alarmTimes.push(addHours(med.time, 16));
+            }
+        }
+
         return (
         <div key={med.id} style={{ backgroundColor: '#111', border: lowWarnings.length > 0 ? '4px solid #FF3B30' : '3px solid #333', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxSizing: 'border-box' }}>
           
@@ -156,21 +168,26 @@ export default function MedicationManager({ goHome }) {
             <div style={{ flexGrow: 1 }}>
               <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#FFF', lineHeight: '1.2' }}>{med.name}</div>
               {med.purpose && <div style={{ fontSize: '22px', color: '#AAA', fontStyle: 'italic', marginTop: '4px' }}>For: {med.purpose}</div>}
-              {med.instructions && <div style={{ fontSize: '22px', color: '#FF9500', fontWeight: 'bold', fontStyle: 'italic', marginTop: '4px' }}>{med.instructions}</div>}
               {med.prescriber && <div style={{ fontSize: '20px', color: '#888', marginTop: '4px' }}>Prescribed by {med.prescriber}</div>}
             </div>
           </div>
 
           <div style={{ backgroundColor: '#222', borderRadius: '16px', padding: '16px', borderLeft: '4px solid #FF9500', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-             {!isMultiBottle && <div style={{ fontSize: '24px', color: '#FFF', fontWeight: 'bold' }}>Take {med.dosage || '1'} {med.frequency && `• ${med.frequency}`}</div>}
-             {isMultiBottle && med.frequency && <div style={{ fontSize: '24px', color: '#FFF', fontWeight: 'bold' }}>{med.frequency}</div>}
-             {med.time && <div style={{ fontSize: '22px', color: '#FF9500', fontWeight: 'bold' }}>at {formatTime(med.time)}</div>}
+             <div style={{ fontSize: '24px', color: '#FFF', fontWeight: 'bold' }}>
+               {!isMultiBottle && `Take ${med.dosage || '1'}`}
+               {med.frequency && ` • ${med.frequency}`}
+             </div>
           </div>
 
-          {med.time && (
-            <button onClick={() => setNativeAlarm(med.name, med.time)} style={{ backgroundColor: '#112244', border: '3px solid #3B82F6', borderRadius: '16px', padding: '20px', color: '#3B82F6', fontSize: '24px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
-              <AlarmClock size={32} /> Set Phone Alarm
-            </button>
+          {alarmTimes.length > 0 && (
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {alarmTimes.map((t, idx) => (
+                   <button key={idx} onClick={() => setNativeAlarm(med.name, t)} style={{ backgroundColor: '#112244', border: '3px solid #3B82F6', borderRadius: '16px', padding: '16px', color: '#3B82F6', fontSize: '20px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><AlarmClock size={24} /> Dose {idx + 1}: {formatTime(t)}</div>
+                     <span>Set Alarm</span>
+                   </button>
+                ))}
+             </div>
           )}
 
           {lowWarnings.length > 0 && (
@@ -320,11 +337,22 @@ export default function MedicationManager({ goHome }) {
             {step === 4 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>When should she take this?</div>
-                <input value={medFrequency} onChange={(e) => setMedFrequency(e.target.value)} placeholder="How often? (e.g. Daily in AM)" style={inputStyle} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#222', border: '2px solid #555', borderRadius: '16px', padding: '12px 16px', boxSizing: 'border-box' }}>
-                  <div style={{ color: '#CCC', fontSize: '20px', fontWeight: 'bold' }}>Time:</div>
-                  <input type="time" value={medTime} onChange={(e) => setMedTime(e.target.value)} style={{ flex: 1, backgroundColor: 'transparent', color: '#FFF', fontSize: '24px', padding: '8px 0', border: 'none', outline: 'none' }} />
-                </div>
+                
+                <select value={medFrequency} onChange={(e) => setMedFrequency(e.target.value)} style={{ ...inputStyle, color: medFrequency ? '#FFF' : '#888' }}>
+                  <option value="" disabled>How often?</option>
+                  <option value="As Needed">As Needed</option>
+                  <option value="Once Daily">Once Daily</option>
+                  <option value="Twice Daily">Twice Daily</option>
+                  <option value="Three Times Daily">Three Times Daily</option>
+                </select>
+
+                {medFrequency && medFrequency !== 'As Needed' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#222', border: '2px solid #555', borderRadius: '16px', padding: '12px 16px', boxSizing: 'border-box' }}>
+                    <div style={{ color: '#CCC', fontSize: '20px', fontWeight: 'bold' }}>First Dose Time:</div>
+                    <input type="time" value={medTime} onChange={(e) => setMedTime(e.target.value)} style={{ flex: 1, backgroundColor: 'transparent', color: '#FFF', fontSize: '24px', padding: '8px 0', border: 'none', outline: 'none' }} />
+                  </div>
+                )}
+                
                 <button onClick={() => setStep(5)} style={nextBtnStyle}>Next Step</button>
               </div>
             )}
