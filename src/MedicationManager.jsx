@@ -89,6 +89,23 @@ export default function MedicationManager({ goHome }) {
     saveHistory([{ id: Date.now(), medId: med.id, name: med.name, timestamp: Date.now() }, ...history]);
   };
 
+  const undoLastDose = (med, logId) => {
+    if (!window.confirm("Undo your last dose? This will restore the inventory and remove the log.")) return;
+    
+    const globalTake = parseInt(med.dosage) || 1; 
+    const updatedMeds = meds.map(m => {
+      if (m.id === med.id) {
+        if (m.type === 'combo3') return { ...m, bottle1: { ...m.bottle1, doses: m.bottle1.doses + (m.bottle1.take || 1) }, bottle2: { ...m.bottle2, doses: m.bottle2.doses + (m.bottle2.take || 1) }, bottle3: { ...m.bottle3, doses: m.bottle3.doses + (m.bottle3.take || 1) } };
+        if (m.type === 'combo2') return { ...m, bottle1: { ...m.bottle1, doses: m.bottle1.doses + (m.bottle1.take || 1) }, bottle2: { ...m.bottle2, doses: m.bottle2.doses + (m.bottle2.take || 1) } };
+        return { ...m, doses: m.doses + globalTake };
+      }
+      return m;
+    });
+    
+    saveMeds(updatedMeds);
+    saveHistory(history.filter(h => h.id !== logId));
+  };
+
   const handleRefill = (med, target) => {
     const namePrompt = target === 'bottle1' ? med.bottle1.name : (target === 'bottle2' ? med.bottle2.name : (target === 'bottle3' ? med.bottle3.name : med.name));
     const amount = window.prompt(`How many pills are you adding to ${namePrompt}?`);
@@ -164,6 +181,12 @@ export default function MedicationManager({ goHome }) {
             }
         }
 
+        // 3-Hour Undo Calculation
+        const medLogs = history.filter(h => h.medId === med.id).sort((a, b) => b.timestamp - a.timestamp);
+        const lastLog = medLogs.length > 0 ? medLogs[0] : null;
+        const THREE_HOURS = 3 * 60 * 60 * 1000;
+        const canUndo = lastLog && (Date.now() - lastLog.timestamp <= THREE_HOURS);
+
         return (
         <div key={med.id} style={{ backgroundColor: '#111', border: lowWarnings.length > 0 ? '4px solid #FF3B30' : '3px solid #333', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
           
@@ -177,9 +200,17 @@ export default function MedicationManager({ goHome }) {
             {isExpanded ? <ChevronUp size={44} color="#888" /> : <ChevronDown size={44} color="#888" />}
           </button>
 
-          <button onClick={() => takeDose(med)} style={{ width: '100%', backgroundColor: '#2E7D32', border: 'none', borderRadius: '20px', padding: '20px', color: '#FFF', fontSize: '26px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '16px' }}>
-            <Check size={32} /> Log Dose
-          </button>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+            <button onClick={() => takeDose(med)} style={{ flex: 1, backgroundColor: '#2E7D32', border: 'none', borderRadius: '20px', padding: '20px', color: '#FFF', fontSize: '26px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+              <Check size={32} /> Log Dose
+            </button>
+            
+            {canUndo && (
+              <button onClick={() => undoLastDose(med, lastLog.id)} style={{ backgroundColor: '#441111', border: '3px solid #FF3B30', borderRadius: '20px', padding: '16px', color: '#FF3B30', fontSize: '22px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+                <RotateCcw size={28} /> Undo
+              </button>
+            )}
+          </div>
 
           {isExpanded && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '20px', paddingTop: '20px', borderTop: '2px solid #333' }}>
@@ -266,8 +297,6 @@ export default function MedicationManager({ goHome }) {
                 </div>
               )}
 
-              
-              
               <button onClick={() => deleteMed(med.id)} style={{ backgroundColor: 'transparent', border: 'none', color: '#666', fontSize: '20px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                 <Trash2 size={24} /> Remove Med
               </button>
