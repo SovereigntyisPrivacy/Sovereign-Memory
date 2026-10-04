@@ -4,11 +4,11 @@ import { Home, Plus, Check, History as HistoryIcon, Pill, RotateCcw, Trash2, Cal
 
 export default function MedicationManager({ goHome }) {
   const [view, setView] = useState('active'); 
+  const [step, setStep] = useState(1);
   const [meds, setMeds] = useState([]);
   const [history, setHistory] = useState([]);
   
   const [medName, setMedName] = useState('');
-  const [medMg, setMedMg] = useState('');
   const [medPrescriber, setMedPrescriber] = useState('');
   const [medPurpose, setMedPurpose] = useState('');
   const [medDosage, setMedDosage] = useState('');
@@ -22,6 +22,9 @@ export default function MedicationManager({ goHome }) {
   const [b1Doses, setB1Doses] = useState('');
   const [b2Doses, setB2Doses] = useState('');
   const [b3Doses, setB3Doses] = useState('');
+  const [b1Take, setB1Take] = useState('');
+  const [b2Take, setB2Take] = useState('');
+  const [b3Take, setB3Take] = useState('');
 
   useEffect(() => {
     const savedMeds = localStorage.getItem('sovereign_meds');
@@ -30,10 +33,12 @@ export default function MedicationManager({ goHome }) {
     if (savedMeds) {
       try {
         const parsed = JSON.parse(savedMeds);
-        // Safely rescue and upgrade any legacy pills to the new format
         const upgraded = parsed.map(m => ({
           ...m,
-          type: m.type || (m.isCombo ? 'combo2' : 'none')
+          type: m.type || (m.isCombo ? 'combo2' : 'none'),
+          bottle1: m.bottle1 ? { ...m.bottle1, take: m.bottle1.take || parseInt(m.dosage) || 1 } : null,
+          bottle2: m.bottle2 ? { ...m.bottle2, take: m.bottle2.take || parseInt(m.dosage) || 1 } : null,
+          bottle3: m.bottle3 ? { ...m.bottle3, take: m.bottle3.take || parseInt(m.dosage) || 1 } : null
         }));
         setMeds(upgraded);
       } catch(e) {}
@@ -45,7 +50,7 @@ export default function MedicationManager({ goHome }) {
     
     const listener = CapApp.addListener('backButton', () => {
       if (view === 'active' && typeof goHome === 'function') goHome();
-      else setView('active');
+      else { setView('active'); setStep(1); }
     });
     return () => { listener.remove(); };
   }, [view, goHome]);
@@ -57,28 +62,29 @@ export default function MedicationManager({ goHome }) {
     if (!medName.trim()) return alert("Please enter a medication name.");
     const newMed = { 
       id: Date.now(), name: medName, type: comboMode,
-      mg: medMg, prescriber: medPrescriber, purpose: medPurpose, instructions: '',
+      prescriber: medPrescriber, purpose: medPurpose, instructions: '',
       dosage: medDosage, frequency: medFrequency, time: medTime,
       doses: (comboMode === 'none' || comboMode === 'mixed3') ? (parseInt(b1Doses) || 0) : null,
-      bottle1: comboMode !== 'none' ? { name: b1Name || 'Pill 1', doses: parseInt(b1Doses) || 0 } : null,
-      bottle2: comboMode !== 'none' ? { name: b2Name || 'Pill 2', doses: parseInt(b2Doses) || 0 } : null,
-      bottle3: (comboMode === 'combo3' || comboMode === 'mixed3') ? { name: b3Name || 'Pill 3', doses: parseInt(b3Doses) || 0 } : null
+      bottle1: comboMode !== 'none' ? { name: b1Name || 'Pill 1', doses: parseInt(b1Doses) || 0, take: parseInt(b1Take) || 1 } : null,
+      bottle2: comboMode !== 'none' ? { name: b2Name || 'Pill 2', doses: parseInt(b2Doses) || 0, take: parseInt(b2Take) || 1 } : null,
+      bottle3: (comboMode === 'combo3' || comboMode === 'mixed3') ? { name: b3Name || 'Pill 3', doses: parseInt(b3Doses) || 0, take: parseInt(b3Take) || 1 } : null
     };
     saveMeds([...meds, newMed]);
-    setMedName(''); setMedMg(''); setMedPrescriber(''); setMedPurpose(''); setMedDosage(''); setMedFrequency(''); setMedTime('');
-    setComboMode('none'); setB1Name(''); setB2Name(''); setB3Name(''); setB1Doses(''); setB2Doses(''); setB3Doses('');
+    setMedName(''); setMedPrescriber(''); setMedPurpose(''); setMedDosage(''); setMedFrequency(''); setMedTime('');
+    setComboMode('none'); setB1Name(''); setB2Name(''); setB3Name(''); setB1Doses(''); setB2Doses(''); setB3Doses(''); setB1Take(''); setB2Take(''); setB3Take('');
+    setStep(1);
     setView('active');
   };
 
   const deleteMed = (id) => { if (window.confirm("Remove this medication?")) saveMeds(meds.filter(m => m.id !== id)); };
 
   const takeDose = (med) => {
-    const takeAmount = parseInt(med.dosage) || 1; 
+    const globalTake = parseInt(med.dosage) || 1; 
     const updatedMeds = meds.map(m => {
       if (m.id === med.id) {
-        if (m.type === 'combo3') return { ...m, bottle1: { ...m.bottle1, doses: Math.max(0, m.bottle1.doses - takeAmount) }, bottle2: { ...m.bottle2, doses: Math.max(0, m.bottle2.doses - takeAmount) }, bottle3: { ...m.bottle3, doses: Math.max(0, m.bottle3.doses - takeAmount) } };
-        if (m.type === 'combo2') return { ...m, bottle1: { ...m.bottle1, doses: Math.max(0, m.bottle1.doses - takeAmount) }, bottle2: { ...m.bottle2, doses: Math.max(0, m.bottle2.doses - takeAmount) } };
-        return { ...m, doses: Math.max(0, m.doses - takeAmount) };
+        if (m.type === 'combo3') return { ...m, bottle1: { ...m.bottle1, doses: Math.max(0, m.bottle1.doses - (m.bottle1.take || 1)) }, bottle2: { ...m.bottle2, doses: Math.max(0, m.bottle2.doses - (m.bottle2.take || 1)) }, bottle3: { ...m.bottle3, doses: Math.max(0, m.bottle3.doses - (m.bottle3.take || 1)) } };
+        if (m.type === 'combo2') return { ...m, bottle1: { ...m.bottle1, doses: Math.max(0, m.bottle1.doses - (m.bottle1.take || 1)) }, bottle2: { ...m.bottle2, doses: Math.max(0, m.bottle2.doses - (m.bottle2.take || 1)) } };
+        return { ...m, doses: Math.max(0, m.doses - globalTake) };
       }
       return m;
     });
@@ -134,7 +140,6 @@ export default function MedicationManager({ goHome }) {
         const isMultiBottle = med.type === 'combo2' || med.type === 'combo3';
         const isMixedBottle = med.type === 'mixed3';
         
-        // Math Engine: Check if ANY bottle is below 10 pills (safe for legacy data)
         const lowWarnings = [];
         if (isMultiBottle) {
            if (med.bottle1 && med.bottle1.doses <= 10) lowWarnings.push(med.bottle1.name);
@@ -145,11 +150,11 @@ export default function MedicationManager({ goHome }) {
         }
 
         return (
-        <div key={med.id} style={{ backgroundColor: '#111', border: lowWarnings.length > 0 ? '4px solid #FF3B30' : '3px solid #333', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div key={med.id} style={{ backgroundColor: '#111', border: lowWarnings.length > 0 ? '4px solid #FF3B30' : '3px solid #333', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxSizing: 'border-box' }}>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ flexGrow: 1 }}>
-              <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#FFF', lineHeight: '1.2' }}>{med.name} {med.mg && <span style={{fontSize: '24px', color: '#CCC'}}>({med.mg})</span>}</div>
+              <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#FFF', lineHeight: '1.2' }}>{med.name}</div>
               {med.purpose && <div style={{ fontSize: '22px', color: '#AAA', fontStyle: 'italic', marginTop: '4px' }}>For: {med.purpose}</div>}
               {med.instructions && <div style={{ fontSize: '22px', color: '#FF9500', fontWeight: 'bold', fontStyle: 'italic', marginTop: '4px' }}>{med.instructions}</div>}
               {med.prescriber && <div style={{ fontSize: '20px', color: '#888', marginTop: '4px' }}>Prescribed by {med.prescriber}</div>}
@@ -157,7 +162,8 @@ export default function MedicationManager({ goHome }) {
           </div>
 
           <div style={{ backgroundColor: '#222', borderRadius: '16px', padding: '16px', borderLeft: '4px solid #FF9500', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-             <div style={{ fontSize: '24px', color: '#FFF', fontWeight: 'bold' }}>Take {med.dosage || '1'} {med.frequency && `• ${med.frequency}`}</div>
+             {!isMultiBottle && <div style={{ fontSize: '24px', color: '#FFF', fontWeight: 'bold' }}>Take {med.dosage || '1'} {med.frequency && `• ${med.frequency}`}</div>}
+             {isMultiBottle && med.frequency && <div style={{ fontSize: '24px', color: '#FFF', fontWeight: 'bold' }}>{med.frequency}</div>}
              {med.time && <div style={{ fontSize: '22px', color: '#FF9500', fontWeight: 'bold' }}>at {formatTime(med.time)}</div>}
           </div>
 
@@ -176,24 +182,27 @@ export default function MedicationManager({ goHome }) {
           {isMultiBottle ? (
             <div style={{ display: 'grid', gridTemplateColumns: med.type === 'combo3' ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
               {med.bottle1 && (
-                <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', minHeight: '44px', display: 'flex', alignItems: 'center' }}>{med.bottle1.name}</div>
+                <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle1.name}</div>
+                  <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle1.take || 1}</div>
                   <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle1.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle1.doses}</div>
-                  <button onClick={() => handleRefill(med, 'bottle1')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold' }}><RotateCcw size={18} /> Refill</button>
+                  <button onClick={() => handleRefill(med, 'bottle1')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
                 </div>
               )}
               {med.bottle2 && (
-                <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', minHeight: '44px', display: 'flex', alignItems: 'center' }}>{med.bottle2.name}</div>
+                <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle2.name}</div>
+                  <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle2.take || 1}</div>
                   <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle2.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle2.doses}</div>
-                  <button onClick={() => handleRefill(med, 'bottle2')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold' }}><RotateCcw size={18} /> Refill</button>
+                  <button onClick={() => handleRefill(med, 'bottle2')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
                 </div>
               )}
               {med.type === 'combo3' && med.bottle3 && (
-                <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', minHeight: '44px', display: 'flex', alignItems: 'center' }}>{med.bottle3.name}</div>
+                <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle3.name}</div>
+                  <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle3.take || 1}</div>
                   <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle3.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle3.doses}</div>
-                  <button onClick={() => handleRefill(med, 'bottle3')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold' }}><RotateCcw size={18} /> Refill</button>
+                  <button onClick={() => handleRefill(med, 'bottle3')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
                 </div>
               )}
             </div>
@@ -231,6 +240,10 @@ export default function MedicationManager({ goHome }) {
       )})}
     </div>
   );
+  const inputStyle = { width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '20px', borderRadius: '16px', border: '2px solid #555', outline: 'none', boxSizing: 'border-box' };
+  const wizardBtnStyle = { width: '100%', backgroundColor: '#222', color: '#FFF', border: '2px solid #555', borderRadius: '16px', padding: '20px', fontSize: '24px', fontWeight: 'bold', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
+  const nextBtnStyle = { width: '100%', backgroundColor: '#3B82F6', color: '#FFF', fontSize: '26px', fontWeight: 'bold', border: 'none', borderRadius: '16px', padding: '24px', marginTop: '16px' };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: '12px', paddingBottom: '24px' }}>
       <button onClick={goHome} style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FF9500', padding: '16px 24px', borderRadius: '16px', color: '#000', fontSize: '22px', fontWeight: 'bold', border: 'none', marginBottom: '24px' }}>
@@ -238,9 +251,9 @@ export default function MedicationManager({ goHome }) {
       </button>
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-        <button onClick={() => setView('active')} style={{ flex: 1, backgroundColor: view === 'active' ? '#FF9500' : '#222', color: view === 'active' ? '#000' : '#FFF', padding: '16px', borderRadius: '16px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}><Pill size={24} /> My Meds</button>
-        <button onClick={() => setView('history')} style={{ flex: 1, backgroundColor: view === 'history' ? '#FF9500' : '#222', color: view === 'history' ? '#000' : '#FFF', padding: '16px', borderRadius: '16px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}><HistoryIcon size={24} /> History</button>
-        <button onClick={() => setView('new')} style={{ flex: 1, backgroundColor: view === 'new' ? '#FF9500' : '#222', color: view === 'new' ? '#000' : '#FFF', padding: '16px', borderRadius: '16px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}><Plus size={24} /> Add Med</button>
+        <button onClick={() => { setView('active'); setStep(1); }} style={{ flex: 1, backgroundColor: view === 'active' ? '#FF9500' : '#222', color: view === 'active' ? '#000' : '#FFF', padding: '16px', borderRadius: '16px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}><Pill size={24} /> My Meds</button>
+        <button onClick={() => { setView('history'); setStep(1); }} style={{ flex: 1, backgroundColor: view === 'history' ? '#FF9500' : '#222', color: view === 'history' ? '#000' : '#FFF', padding: '16px', borderRadius: '16px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}><HistoryIcon size={24} /> History</button>
+        <button onClick={() => { setView('new'); setStep(1); }} style={{ flex: 1, backgroundColor: view === 'new' ? '#FF9500' : '#222', color: view === 'new' ? '#000' : '#FFF', padding: '16px', borderRadius: '16px', fontSize: '18px', fontWeight: 'bold', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}><Plus size={24} /> Add Med</button>
       </div>
 
       {view === 'active' && renderActive()}
@@ -270,72 +283,110 @@ export default function MedicationManager({ goHome }) {
 
       {view === 'new' && (
         <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '24px' }}>
-          <div style={{ backgroundColor: '#111', border: '3px solid #333', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h2 style={{ color: '#FF9500', margin: '0 0 8px 0', fontSize: '32px' }}>Add Medication</h2>
+          <div style={{ backgroundColor: '#111', border: '3px solid #333', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', boxSizing: 'border-box' }}>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '12px' }}>
-              <button onClick={() => setComboMode('none')} style={{ backgroundColor: comboMode === 'none' ? '#FF9500' : '#222', color: comboMode === 'none' ? '#000' : '#FFF', border: '2px solid #555', borderRadius: '12px', padding: '16px 8px', fontSize: '18px', fontWeight: 'bold' }}>1 Pill<br/><span style={{fontSize:'14px', fontWeight:'normal'}}>(1 Bottle)</span></button>
-              <button onClick={() => setComboMode('mixed3')} style={{ backgroundColor: comboMode === 'mixed3' ? '#FF9500' : '#222', color: comboMode === 'mixed3' ? '#000' : '#FFF', border: '2px solid #555', borderRadius: '12px', padding: '16px 8px', fontSize: '18px', fontWeight: 'bold' }}>3 Pills<br/><span style={{fontSize:'14px', fontWeight:'normal'}}>(1 Mixed Bottle)</span></button>
-              <button onClick={() => setComboMode('combo2')} style={{ backgroundColor: comboMode === 'combo2' ? '#FF9500' : '#222', color: comboMode === 'combo2' ? '#000' : '#FFF', border: '2px solid #555', borderRadius: '12px', padding: '16px 8px', fontSize: '18px', fontWeight: 'bold' }}>2 Pills<br/><span style={{fontSize:'14px', fontWeight:'normal'}}>(2 Bottles)</span></button>
-              <button onClick={() => setComboMode('combo3')} style={{ backgroundColor: comboMode === 'combo3' ? '#FF9500' : '#222', color: comboMode === 'combo3' ? '#000' : '#FFF', border: '2px solid #555', borderRadius: '12px', padding: '16px 8px', fontSize: '18px', fontWeight: 'bold' }}>3 Pills<br/><span style={{fontSize:'14px', fontWeight:'normal'}}>(3 Bottles)</span></button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #333', paddingBottom: '16px' }}>
+              <h2 style={{ color: '#FF9500', margin: 0, fontSize: '28px' }}>Step {step} of 5</h2>
+              {step > 1 && <button onClick={() => setStep(step - 1)} style={{ backgroundColor: '#333', border: 'none', borderRadius: '12px', padding: '8px 16px', color: '#FFF', fontSize: '18px', fontWeight: 'bold' }}>Back</button>}
             </div>
 
-            <input value={medName} onChange={(e) => setMedName(e.target.value)} placeholder="Medication Name" style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '20px', borderRadius: '16px', border: '2px solid #555', outline: 'none' }} />
-            <input value={medMg} onChange={(e) => setMedMg(e.target.value)} placeholder="How many mg?" style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '20px', borderRadius: '16px', border: '2px solid #555', outline: 'none' }} />
-            <input value={medPrescriber} onChange={(e) => setMedPrescriber(e.target.value)} placeholder="Who prescribed it?" style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '20px', borderRadius: '16px', border: '2px solid #555', outline: 'none' }} />
-            <input value={medPurpose} onChange={(e) => setMedPurpose(e.target.value)} placeholder="What is it for?" style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '20px', borderRadius: '16px', border: '2px solid #555', outline: 'none' }} />
-            
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <input type="number" value={medDosage} onChange={(e) => setMedDosage(e.target.value)} placeholder="Qty to take?" style={{ flex: 1, backgroundColor: '#222', color: '#FFF', fontSize: '20px', padding: '20px', borderRadius: '16px', border: '2px solid #555', outline: 'none' }} />
-              <input value={medFrequency} onChange={(e) => setMedFrequency(e.target.value)} placeholder="How often?" style={{ flex: 1, backgroundColor: '#222', color: '#FFF', fontSize: '20px', padding: '20px', borderRadius: '16px', border: '2px solid #555', outline: 'none' }} />
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#222', border: '2px solid #555', borderRadius: '16px', padding: '8px 16px' }}>
-              <div style={{ color: '#CCC', fontSize: '20px', fontWeight: 'bold' }}>Time:</div>
-              <input type="time" value={medTime} onChange={(e) => setMedTime(e.target.value)} style={{ flex: 1, backgroundColor: 'transparent', color: '#FFF', fontSize: '24px', padding: '12px 0', border: 'none', outline: 'none' }} />
-            </div>
-            
-            {comboMode === 'mixed3' ? (
-              <div style={{ backgroundColor: '#222', padding: '16px', borderRadius: '16px', border: '2px dashed #FF9500', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-                <div style={{ color: '#FF9500', fontSize: '20px', fontWeight: 'bold' }}>What's inside?</div>
-                <input value={b1Name} onChange={(e) => setB1Name(e.target.value)} placeholder="Pill 1 Name" style={{ width: '100%', backgroundColor: '#111', color: '#FFF', fontSize: '22px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
-                <input value={b2Name} onChange={(e) => setB2Name(e.target.value)} placeholder="Pill 2 Name" style={{ width: '100%', backgroundColor: '#111', color: '#FFF', fontSize: '22px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
-                <input value={b3Name} onChange={(e) => setB3Name(e.target.value)} placeholder="Pill 3 Name" style={{ width: '100%', backgroundColor: '#111', color: '#FFF', fontSize: '22px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
-                <div style={{ borderBottom: '2px dashed #444', margin: '4px 0' }} />
-                <input type="number" value={b1Doses} onChange={(e) => setB1Doses(e.target.value)} placeholder="Total Pills in Bottle..." style={{ width: '100%', backgroundColor: '#111', color: '#FFF', fontSize: '22px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
+            {step === 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>What kind of medication is this?</div>
+                <button onClick={() => { setComboMode('none'); setStep(2); }} style={wizardBtnStyle}><span>1 Pill (1 Bottle)</span> <span style={{color: '#FF9500'}}>→</span></button>
+                <button onClick={() => { setComboMode('mixed3'); setStep(2); }} style={wizardBtnStyle}><span>3 Pills (1 Mixed Bottle)</span> <span style={{color: '#FF9500'}}>→</span></button>
+                <button onClick={() => { setComboMode('combo2'); setStep(2); }} style={wizardBtnStyle}><span>2 Pills (2 Bottles)</span> <span style={{color: '#FF9500'}}>→</span></button>
+                <button onClick={() => { setComboMode('combo3'); setStep(2); }} style={wizardBtnStyle}><span>3 Pills (3 Bottles)</span> <span style={{color: '#FF9500'}}>→</span></button>
               </div>
-            ) : comboMode === 'combo2' || comboMode === 'combo3' ? (
-              <div style={{ backgroundColor: '#222', padding: '16px', borderRadius: '16px', border: '2px dashed #FF9500', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-                <div style={{ color: '#FF9500', fontSize: '20px', fontWeight: 'bold' }}>Bottle 1</div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input value={b1Name} onChange={(e) => setB1Name(e.target.value)} placeholder="Name" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '20px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
-                  <input type="number" value={b1Doses} onChange={(e) => setB1Doses(e.target.value)} placeholder="Qty..." style={{ width: '100px', backgroundColor: '#111', color: '#FFF', fontSize: '20px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
-                </div>
-                
-                <div style={{ borderBottom: '2px dashed #444', margin: '4px 0' }} />
-                
-                <div style={{ color: '#FF9500', fontSize: '20px', fontWeight: 'bold' }}>Bottle 2</div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input value={b2Name} onChange={(e) => setB2Name(e.target.value)} placeholder="Name" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '20px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
-                  <input type="number" value={b2Doses} onChange={(e) => setB2Doses(e.target.value)} placeholder="Qty..." style={{ width: '100px', backgroundColor: '#111', color: '#FFF', fontSize: '20px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
-                </div>
+            )}
 
-                {comboMode === 'combo3' && (
+            {step === 2 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>Basic Info</div>
+                <input value={medName} onChange={(e) => setMedName(e.target.value)} placeholder="Medication Name" style={inputStyle} />
+                <button onClick={() => setStep(3)} style={nextBtnStyle}>Next Step</button>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>Details (Optional)</div>
+                <input value={medPrescriber} onChange={(e) => setMedPrescriber(e.target.value)} placeholder="Who prescribed it?" style={inputStyle} />
+                <input value={medPurpose} onChange={(e) => setMedPurpose(e.target.value)} placeholder="What is it for?" style={inputStyle} />
+                <button onClick={() => setStep(4)} style={nextBtnStyle}>Next Step</button>
+              </div>
+            )}
+
+            {step === 4 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>When should she take this?</div>
+                <input value={medFrequency} onChange={(e) => setMedFrequency(e.target.value)} placeholder="How often? (e.g. Daily in AM)" style={inputStyle} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#222', border: '2px solid #555', borderRadius: '16px', padding: '12px 16px', boxSizing: 'border-box' }}>
+                  <div style={{ color: '#CCC', fontSize: '20px', fontWeight: 'bold' }}>Time:</div>
+                  <input type="time" value={medTime} onChange={(e) => setMedTime(e.target.value)} style={{ flex: 1, backgroundColor: 'transparent', color: '#FFF', fontSize: '24px', padding: '8px 0', border: 'none', outline: 'none' }} />
+                </div>
+                <button onClick={() => setStep(5)} style={nextBtnStyle}>Next Step</button>
+              </div>
+            )}
+
+            {step === 5 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>Inventory Setup</div>
+                
+                {comboMode === 'none' && (
                   <>
-                    <div style={{ borderBottom: '2px dashed #444', margin: '4px 0' }} />
-                    <div style={{ color: '#FF9500', fontSize: '20px', fontWeight: 'bold' }}>Bottle 3</div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input value={b3Name} onChange={(e) => setB3Name(e.target.value)} placeholder="Name" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '20px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
-                      <input type="number" value={b3Doses} onChange={(e) => setB3Doses(e.target.value)} placeholder="Qty..." style={{ width: '100px', backgroundColor: '#111', color: '#FFF', fontSize: '20px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
-                    </div>
+                    <input type="number" value={medDosage} onChange={(e) => setMedDosage(e.target.value)} placeholder="Qty to take per dose? (e.g. 1)" style={inputStyle} />
+                    <input type="number" value={b1Doses} onChange={(e) => setB1Doses(e.target.value)} placeholder="Total pills remaining in bottle..." style={inputStyle} />
                   </>
                 )}
+
+                {comboMode === 'mixed3' && (
+                  <div style={{ backgroundColor: '#222', padding: '20px', borderRadius: '16px', border: '2px dashed #FF9500', display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box' }}>
+                    <div style={{ color: '#FF9500', fontSize: '22px', fontWeight: 'bold' }}>What's inside?</div>
+                    <input value={b1Name} onChange={(e) => setB1Name(e.target.value)} placeholder="Pill 1 Name" style={inputStyle} />
+                    <input value={b2Name} onChange={(e) => setB2Name(e.target.value)} placeholder="Pill 2 Name" style={inputStyle} />
+                    <input value={b3Name} onChange={(e) => setB3Name(e.target.value)} placeholder="Pill 3 Name" style={inputStyle} />
+                    <div style={{ borderBottom: '2px dashed #444', margin: '8px 0' }} />
+                    <input type="number" value={b1Doses} onChange={(e) => setB1Doses(e.target.value)} placeholder="Total mixed doses in bottle..." style={inputStyle} />
+                  </div>
+                )}
+
+                {(comboMode === 'combo2' || comboMode === 'combo3') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ backgroundColor: '#222', padding: '20px', borderRadius: '16px', border: '2px dashed #FF9500', display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box' }}>
+                      <div style={{ color: '#FF9500', fontSize: '22px', fontWeight: 'bold' }}>Bottle 1</div>
+                      <input value={b1Name} onChange={(e) => setB1Name(e.target.value)} placeholder="Label (e.g. 5mg)" style={inputStyle} />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input type="number" value={b1Take} onChange={(e) => setB1Take(e.target.value)} placeholder="Take qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
+                        <input type="number" value={b1Doses} onChange={(e) => setB1Doses(e.target.value)} placeholder="Total qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
+                      </div>
+                    </div>
+                    
+                    <div style={{ backgroundColor: '#222', padding: '20px', borderRadius: '16px', border: '2px dashed #FF9500', display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box' }}>
+                      <div style={{ color: '#FF9500', fontSize: '22px', fontWeight: 'bold' }}>Bottle 2</div>
+                      <input value={b2Name} onChange={(e) => setB2Name(e.target.value)} placeholder="Label (e.g. 2mg)" style={inputStyle} />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input type="number" value={b2Take} onChange={(e) => setB2Take(e.target.value)} placeholder="Take qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
+                        <input type="number" value={b2Doses} onChange={(e) => setB2Doses(e.target.value)} placeholder="Total qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
+                      </div>
+                    </div>
+
+                    {comboMode === 'combo3' && (
+                      <div style={{ backgroundColor: '#222', padding: '20px', borderRadius: '16px', border: '2px dashed #FF9500', display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box' }}>
+                        <div style={{ color: '#FF9500', fontSize: '22px', fontWeight: 'bold' }}>Bottle 3</div>
+                        <input value={b3Name} onChange={(e) => setB3Name(e.target.value)} placeholder="Label (e.g. Supplement)" style={inputStyle} />
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input type="number" value={b3Take} onChange={(e) => setB3Take(e.target.value)} placeholder="Take qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
+                          <input type="number" value={b3Doses} onChange={(e) => setB3Doses(e.target.value)} placeholder="Total qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <button onClick={addMedication} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '28px', fontWeight: 'bold', border: 'none', borderRadius: '20px', padding: '24px', marginTop: '12px' }}>Save Medication</button>
               </div>
-            ) : (
-              <input type="number" value={b1Doses} onChange={(e) => setB1Doses(e.target.value)} placeholder="Total Pills remaining..." style={{ width: '100%', backgroundColor: '#222', color: '#FFF', fontSize: '24px', padding: '20px', borderRadius: '16px', border: '2px solid #555', outline: 'none', marginTop: '12px' }} />
             )}
-            
-            <button onClick={addMedication} style={{ width: '100%', backgroundColor: '#FF9500', color: '#000', fontSize: '28px', fontWeight: 'bold', border: 'none', borderRadius: '20px', padding: '24px', marginTop: '12px' }}>Save Medication</button>
           </div>
         </div>
       )}
