@@ -177,6 +177,10 @@ export default function MedicationManager({ goHome }) {
             {isExpanded ? <ChevronUp size={44} color="#888" /> : <ChevronDown size={44} color="#888" />}
           </button>
 
+          <button onClick={() => takeDose(med)} style={{ width: '100%', backgroundColor: '#2E7D32', border: 'none', borderRadius: '20px', padding: '20px', color: '#FFF', fontSize: '26px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '16px' }}>
+            <Check size={32} /> Log Dose
+          </button>
+
           {isExpanded && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '20px', paddingTop: '20px', borderTop: '2px solid #333' }}>
               
@@ -262,9 +266,7 @@ export default function MedicationManager({ goHome }) {
                 </div>
               )}
 
-              <button onClick={() => takeDose(med)} style={{ width: '100%', backgroundColor: '#2E7D32', border: 'none', borderRadius: '20px', padding: '24px', color: '#FFF', fontSize: '28px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
-                <Check size={36} /> Log Dose
-              </button>
+              
               
               <button onClick={() => deleteMed(med.id)} style={{ backgroundColor: 'transparent', border: 'none', color: '#666', fontSize: '20px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                 <Trash2 size={24} /> Remove Med
