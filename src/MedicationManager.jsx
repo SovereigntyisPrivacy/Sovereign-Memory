@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { App as CapApp } from '@capacitor/app';
-import { Home, Plus, Check, History as HistoryIcon, Pill, RotateCcw, Trash2, Calendar, AlarmClock, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Home, Plus, Check, History as HistoryIcon, Pill, RotateCcw, Trash2, Calendar, AlarmClock, AlertTriangle, ChevronDown, ChevronUp, Bell } from 'lucide-react';
 
 export default function MedicationManager({ goHome }) {
   const [view, setView] = useState('active'); 
@@ -10,16 +11,21 @@ export default function MedicationManager({ goHome }) {
   const [history, setHistory] = useState([]);
   
   const [medName, setMedName] = useState('');
+  const [medMg, setMedMg] = useState('');
   const [medPrescriber, setMedPrescriber] = useState('');
   const [medPurpose, setMedPurpose] = useState('');
   const [medDosage, setMedDosage] = useState('');
   const [medFrequency, setMedFrequency] = useState('');
   const [medTime, setMedTime] = useState('');
+  const [medReminder, setMedReminder] = useState(true);
   
   const [comboMode, setComboMode] = useState('none');
   const [b1Name, setB1Name] = useState('');
   const [b2Name, setB2Name] = useState('');
   const [b3Name, setB3Name] = useState('');
+  const [b1Mg, setB1Mg] = useState('');
+  const [b2Mg, setB2Mg] = useState('');
+  const [b3Mg, setB3Mg] = useState('');
   const [b1Doses, setB1Doses] = useState('');
   const [b2Doses, setB2Doses] = useState('');
   const [b3Doses, setB3Doses] = useState('');
@@ -53,23 +59,55 @@ export default function MedicationManager({ goHome }) {
 
   const saveMeds = (updated) => { setMeds(updated); localStorage.setItem('sovereign_meds', JSON.stringify(updated)); };
   const saveHistory = (updated) => { setHistory(updated); localStorage.setItem('sovereign_meds_history', JSON.stringify(updated)); };
-
   const toggleExpand = (id) => setExpandedMeds(prev => ({ ...prev, [id]: !prev[id] }));
 
-  const addMedication = () => {
+  const addMedication = async () => {
     if (!medName.trim()) return alert("Please enter a medication name.");
+    
+    const times = [];
+    if (medTime && medFrequency && medFrequency !== 'As Needed') {
+        times.push(medTime);
+        if (medFrequency === 'Twice Daily') times.push(addHours(medTime, 12));
+        if (medFrequency === 'Three Times Daily') {
+            times.push(addHours(medTime, 8));
+            times.push(addHours(medTime, 16));
+        }
+    }
+
     const newMed = { 
-      id: Date.now(), name: medName, type: comboMode,
+      id: Date.now(), name: medName, type: comboMode, mg: medMg,
       prescriber: medPrescriber, purpose: medPurpose, instructions: '',
-      dosage: medDosage, frequency: medFrequency, time: medTime,
+      dosage: medDosage, frequency: medFrequency, time: medTime, reminder: medReminder,
       doses: (comboMode === 'none' || comboMode === 'mixed3') ? (parseInt(b1Doses) || 0) : null,
-      bottle1: comboMode !== 'none' ? { name: b1Name || 'Pill 1', doses: parseInt(b1Doses) || 0, take: parseInt(b1Take) || 1 } : null,
-      bottle2: comboMode !== 'none' ? { name: b2Name || 'Pill 2', doses: parseInt(b2Doses) || 0, take: parseInt(b2Take) || 1 } : null,
-      bottle3: (comboMode === 'combo3' || comboMode === 'mixed3') ? { name: b3Name || 'Pill 3', doses: parseInt(b3Doses) || 0, take: parseInt(b3Take) || 1 } : null
+      bottle1: comboMode !== 'none' ? { name: b1Name || 'Pill 1', mg: b1Mg, doses: parseInt(b1Doses) || 0, take: parseInt(b1Take) || 1 } : null,
+      bottle2: comboMode !== 'none' ? { name: b2Name || 'Pill 2', mg: b2Mg, doses: parseInt(b2Doses) || 0, take: parseInt(b2Take) || 1 } : null,
+      bottle3: (comboMode === 'combo3' || comboMode === 'mixed3') ? { name: b3Name || 'Pill 3', mg: b3Mg, doses: parseInt(b3Doses) || 0, take: parseInt(b3Take) || 1 } : null
     };
+    
     saveMeds([...meds, newMed]);
-    setMedName(''); setMedPrescriber(''); setMedPurpose(''); setMedDosage(''); setMedFrequency(''); setMedTime('');
-    setComboMode('none'); setB1Name(''); setB2Name(''); setB3Name(''); setB1Doses(''); setB2Doses(''); setB3Doses(''); setB1Take(''); setB2Take(''); setB3Take('');
+
+    if (medReminder && times.length > 0) {
+        try {
+            await LocalNotifications.requestPermissions();
+            const notifs = times.map((t, i) => {
+                const [h, m] = t.split(':').map(Number);
+                return {
+                    id: Math.floor(Date.now() / 1000) + i,
+                    title: 'Sovereign Memory',
+                    body: `It's time to take ${medName}`,
+                    schedule: { on: { hour: h, minute: m }, allowWhileIdle: true }
+                };
+            });
+            await LocalNotifications.schedule({ notifications: notifs });
+            
+            // Auto-launch the native alarm for the primary dose
+            setTimeout(() => setNativeAlarm(medName, medTime), 500);
+        } catch(e) { console.log('Notification scheduling failed', e); }
+    }
+
+    setMedName(''); setMedMg(''); setMedPrescriber(''); setMedPurpose(''); setMedDosage(''); setMedFrequency(''); setMedTime('');
+    setComboMode('none'); setB1Name(''); setB2Name(''); setB3Name(''); setB1Mg(''); setB2Mg(''); setB3Mg('');
+    setB1Doses(''); setB2Doses(''); setB3Doses(''); setB1Take(''); setB2Take(''); setB3Take('');
     setStep(1); setView('active');
   };
 
@@ -91,7 +129,6 @@ export default function MedicationManager({ goHome }) {
 
   const undoLastDose = (med, logId) => {
     if (!window.confirm("Undo your last dose? This will restore the inventory and remove the log.")) return;
-    
     const globalTake = parseInt(med.dosage) || 1; 
     const updatedMeds = meds.map(m => {
       if (m.id === med.id) {
@@ -101,7 +138,6 @@ export default function MedicationManager({ goHome }) {
       }
       return m;
     });
-    
     saveMeds(updatedMeds);
     saveHistory(history.filter(h => h.id !== logId));
   };
@@ -181,7 +217,6 @@ export default function MedicationManager({ goHome }) {
             }
         }
 
-        // 3-Hour Undo Calculation
         const medLogs = history.filter(h => h.medId === med.id).sort((a, b) => b.timestamp - a.timestamp);
         const lastLog = medLogs.length > 0 ? medLogs[0] : null;
         const THREE_HOURS = 3 * 60 * 60 * 1000;
@@ -192,7 +227,9 @@ export default function MedicationManager({ goHome }) {
           
           <button onClick={() => toggleExpand(med.id)} style={{ width: '100%', backgroundColor: 'transparent', border: 'none', padding: 0, textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ flexGrow: 1 }}>
-              <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#FFF', lineHeight: '1.2' }}>{med.name}</div>
+              <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#FFF', lineHeight: '1.2' }}>
+                {med.name} {(!isMultiBottle && !isMixedBottle && med.mg) && <span style={{fontSize: '26px', color: '#CCC'}}>({med.mg})</span>}
+              </div>
               <div style={{ fontSize: '22px', color: '#FF9500', fontWeight: 'bold', marginTop: '6px' }}>
                 {med.time ? formatTime(med.time) : ''} {med.time && med.frequency && med.frequency !== 'As Needed' ? ' | ' : ''} {med.frequency || ''}
               </div>
@@ -251,7 +288,9 @@ export default function MedicationManager({ goHome }) {
                 <div style={{ display: 'grid', gridTemplateColumns: med.type === 'combo3' ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
                   {med.bottle1 && (
                     <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle1.name}</div>
+                      <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', minHeight: '44px' }}>
+                        {med.bottle1.name} {med.bottle1.mg && <span style={{color: '#888', marginLeft: '4px'}}>({med.bottle1.mg})</span>}
+                      </div>
                       <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle1.take || 1}</div>
                       <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle1.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle1.doses}</div>
                       <button onClick={() => handleRefill(med, 'bottle1')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
@@ -259,7 +298,9 @@ export default function MedicationManager({ goHome }) {
                   )}
                   {med.bottle2 && (
                     <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle2.name}</div>
+                      <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', minHeight: '44px' }}>
+                        {med.bottle2.name} {med.bottle2.mg && <span style={{color: '#888', marginLeft: '4px'}}>({med.bottle2.mg})</span>}
+                      </div>
                       <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle2.take || 1}</div>
                       <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle2.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle2.doses}</div>
                       <button onClick={() => handleRefill(med, 'bottle2')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
@@ -267,7 +308,9 @@ export default function MedicationManager({ goHome }) {
                   )}
                   {med.type === 'combo3' && med.bottle3 && (
                     <div style={{ backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', minHeight: '44px' }}>{med.bottle3.name}</div>
+                      <div style={{ fontSize: '18px', color: '#CCC', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', minHeight: '44px' }}>
+                        {med.bottle3.name} {med.bottle3.mg && <span style={{color: '#888', marginLeft: '4px'}}>({med.bottle3.mg})</span>}
+                      </div>
                       <div style={{ fontSize: '16px', color: '#FF9500', fontWeight: 'bold' }}>Take {med.bottle3.take || 1}</div>
                       <div style={{ fontSize: '36px', fontWeight: 'bold', color: med.bottle3.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.bottle3.doses}</div>
                       <button onClick={() => handleRefill(med, 'bottle3')} style={{ width: '100%', backgroundColor: '#112244', border: '2px solid #3B82F6', borderRadius: '12px', padding: '12px', color: '#3B82F6', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}><RotateCcw size={18} /> Refill</button>
@@ -278,9 +321,9 @@ export default function MedicationManager({ goHome }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#222', border: '2px solid #555', borderRadius: '20px', padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ color: '#FF9500', fontWeight: 'bold', fontSize: '20px' }}>Bottle Contains:</div>
-                    <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle1?.name}</div>
-                    <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle2?.name}</div>
-                    <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle3?.name}</div>
+                    <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle1?.name} {med.bottle1?.mg && `(${med.bottle1.mg})`}</div>
+                    <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle2?.name} {med.bottle2?.mg && `(${med.bottle2.mg})`}</div>
+                    <div style={{ color: '#CCC', fontSize: '20px' }}>• {med.bottle3?.name} {med.bottle3?.mg && `(${med.bottle3.mg})`}</div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                     <div style={{ fontSize: '48px', fontWeight: 'bold', color: med.doses <= 10 ? '#FF3B30' : '#FFF' }}>{med.doses}</div>
@@ -370,6 +413,9 @@ export default function MedicationManager({ goHome }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ color: '#FFF', fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>Basic Info</div>
                 <input value={medName} onChange={(e) => setMedName(e.target.value)} placeholder="Medication Name" style={inputStyle} />
+                {comboMode === 'none' && (
+                   <input value={medMg} onChange={(e) => setMedMg(e.target.value)} placeholder="Strength (e.g. 5mg)" style={inputStyle} />
+                )}
                 <button onClick={() => setStep(3)} style={nextBtnStyle}>Next Step</button>
               </div>
             )}
@@ -396,10 +442,16 @@ export default function MedicationManager({ goHome }) {
                 </select>
 
                 {medFrequency && medFrequency !== 'As Needed' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#222', border: '2px solid #555', borderRadius: '16px', padding: '12px 16px', boxSizing: 'border-box' }}>
-                    <div style={{ color: '#CCC', fontSize: '20px', fontWeight: 'bold' }}>First Dose Time:</div>
-                    <input type="time" value={medTime} onChange={(e) => setMedTime(e.target.value)} style={{ flex: 1, backgroundColor: 'transparent', color: '#FFF', fontSize: '24px', padding: '8px 0', border: 'none', outline: 'none' }} />
-                  </div>
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#222', border: '2px solid #555', borderRadius: '16px', padding: '12px 16px', boxSizing: 'border-box' }}>
+                      <div style={{ color: '#CCC', fontSize: '20px', fontWeight: 'bold' }}>First Dose Time:</div>
+                      <input type="time" value={medTime} onChange={(e) => setMedTime(e.target.value)} style={{ flex: 1, backgroundColor: 'transparent', color: '#FFF', fontSize: '24px', padding: '8px 0', border: 'none', outline: 'none' }} />
+                    </div>
+
+                    <button onClick={() => setMedReminder(!medReminder)} style={{ backgroundColor: medReminder ? '#FF9500' : '#444', border: 'none', borderRadius: '12px', padding: '16px', color: medReminder ? '#000' : '#FFF', fontSize: '20px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <Bell size={24} /> {medReminder ? 'Auto-Set Alarms & Reminders: ON' : 'Auto-Set Alarms & Reminders: OFF'}
+                    </button>
+                  </>
                 )}
                 
                 <button onClick={() => setStep(5)} style={nextBtnStyle}>Next Step</button>
@@ -420,9 +472,9 @@ export default function MedicationManager({ goHome }) {
                 {comboMode === 'mixed3' && (
                   <div style={{ backgroundColor: '#222', padding: '20px', borderRadius: '16px', border: '2px dashed #FF9500', display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box' }}>
                     <div style={{ color: '#FF9500', fontSize: '22px', fontWeight: 'bold' }}>What's inside?</div>
-                    <input value={b1Name} onChange={(e) => setB1Name(e.target.value)} placeholder="Pill 1 Name" style={inputStyle} />
-                    <input value={b2Name} onChange={(e) => setB2Name(e.target.value)} placeholder="Pill 2 Name" style={inputStyle} />
-                    <input value={b3Name} onChange={(e) => setB3Name(e.target.value)} placeholder="Pill 3 Name" style={inputStyle} />
+                    <div style={{ display: 'flex', gap: '8px' }}><input value={b1Name} onChange={(e) => setB1Name(e.target.value)} placeholder="Pill 1 Name" style={{...inputStyle, flex: 2, marginBottom: 0}} /> <input value={b1Mg} onChange={(e) => setB1Mg(e.target.value)} placeholder="mg?" style={{...inputStyle, flex: 1, marginBottom: 0}} /></div>
+                    <div style={{ display: 'flex', gap: '8px' }}><input value={b2Name} onChange={(e) => setB2Name(e.target.value)} placeholder="Pill 2 Name" style={{...inputStyle, flex: 2, marginBottom: 0}} /> <input value={b2Mg} onChange={(e) => setB2Mg(e.target.value)} placeholder="mg?" style={{...inputStyle, flex: 1, marginBottom: 0}} /></div>
+                    <div style={{ display: 'flex', gap: '8px' }}><input value={b3Name} onChange={(e) => setB3Name(e.target.value)} placeholder="Pill 3 Name" style={{...inputStyle, flex: 2, marginBottom: 0}} /> <input value={b3Mg} onChange={(e) => setB3Mg(e.target.value)} placeholder="mg?" style={{...inputStyle, flex: 1, marginBottom: 0}} /></div>
                     <div style={{ borderBottom: '2px dashed #444', margin: '8px 0' }} />
                     <input type="number" value={b1Doses} onChange={(e) => setB1Doses(e.target.value)} placeholder="Total mixed doses in bottle..." style={inputStyle} />
                   </div>
@@ -432,8 +484,8 @@ export default function MedicationManager({ goHome }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ backgroundColor: '#222', padding: '20px', borderRadius: '16px', border: '2px dashed #FF9500', display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box' }}>
                       <div style={{ color: '#FF9500', fontSize: '22px', fontWeight: 'bold' }}>Bottle 1</div>
-                      <input value={b1Name} onChange={(e) => setB1Name(e.target.value)} placeholder="Label (e.g. 5mg)" style={inputStyle} />
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}><input value={b1Name} onChange={(e) => setB1Name(e.target.value)} placeholder="Label (e.g. Pill)" style={{...inputStyle, flex: 2, marginBottom: 0}} /> <input value={b1Mg} onChange={(e) => setB1Mg(e.target.value)} placeholder="mg?" style={{...inputStyle, flex: 1, marginBottom: 0}} /></div>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                         <input type="number" value={b1Take} onChange={(e) => setB1Take(e.target.value)} placeholder="Take qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
                         <input type="number" value={b1Doses} onChange={(e) => setB1Doses(e.target.value)} placeholder="Total qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
                       </div>
@@ -441,8 +493,8 @@ export default function MedicationManager({ goHome }) {
                     
                     <div style={{ backgroundColor: '#222', padding: '20px', borderRadius: '16px', border: '2px dashed #FF9500', display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box' }}>
                       <div style={{ color: '#FF9500', fontSize: '22px', fontWeight: 'bold' }}>Bottle 2</div>
-                      <input value={b2Name} onChange={(e) => setB2Name(e.target.value)} placeholder="Label (e.g. 2mg)" style={inputStyle} />
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}><input value={b2Name} onChange={(e) => setB2Name(e.target.value)} placeholder="Label (e.g. Pill)" style={{...inputStyle, flex: 2, marginBottom: 0}} /> <input value={b2Mg} onChange={(e) => setB2Mg(e.target.value)} placeholder="mg?" style={{...inputStyle, flex: 1, marginBottom: 0}} /></div>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                         <input type="number" value={b2Take} onChange={(e) => setB2Take(e.target.value)} placeholder="Take qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
                         <input type="number" value={b2Doses} onChange={(e) => setB2Doses(e.target.value)} placeholder="Total qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
                       </div>
@@ -451,8 +503,8 @@ export default function MedicationManager({ goHome }) {
                     {comboMode === 'combo3' && (
                       <div style={{ backgroundColor: '#222', padding: '20px', borderRadius: '16px', border: '2px dashed #FF9500', display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box' }}>
                         <div style={{ color: '#FF9500', fontSize: '22px', fontWeight: 'bold' }}>Bottle 3</div>
-                        <input value={b3Name} onChange={(e) => setB3Name(e.target.value)} placeholder="Label (e.g. Supplement)" style={inputStyle} />
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px' }}><input value={b3Name} onChange={(e) => setB3Name(e.target.value)} placeholder="Label (e.g. Pill)" style={{...inputStyle, flex: 2, marginBottom: 0}} /> <input value={b3Mg} onChange={(e) => setB3Mg(e.target.value)} placeholder="mg?" style={{...inputStyle, flex: 1, marginBottom: 0}} /></div>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                           <input type="number" value={b3Take} onChange={(e) => setB3Take(e.target.value)} placeholder="Take qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
                           <input type="number" value={b3Doses} onChange={(e) => setB3Doses(e.target.value)} placeholder="Total qty?" style={{ flex: 1, backgroundColor: '#111', color: '#FFF', fontSize: '18px', padding: '16px', borderRadius: '12px', border: '2px solid #444', outline: 'none' }} />
                         </div>
